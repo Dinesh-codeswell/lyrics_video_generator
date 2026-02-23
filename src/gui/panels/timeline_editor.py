@@ -14,6 +14,8 @@ from PyQt6.QtGui import (
     QPainter,
     QPen,
     QPolygon,
+    QUndoCommand,
+    QUndoStack,
     QWheelEvent,
 )
 from PyQt6.QtWidgets import (
@@ -75,9 +77,10 @@ def _fmt_s(t: float) -> str:
 class _TimelineCanvas(QWidget):
     """Custom QPainter widget: ruler, lyric-marker track, playback cursor."""
 
-    marker_moved    = pyqtSignal(int, float)  # index, new_start_time_s
-    marker_selected = pyqtSignal(int)          # index (-1 = deselected)
-    seek_requested  = pyqtSignal(float)        # time_s
+    marker_moved          = pyqtSignal(int, float)         # index, new_start_time_s
+    marker_drag_committed = pyqtSignal(int, float, float)  # index, old_t, new_t
+    marker_selected       = pyqtSignal(int)                # index (-1 = deselected)
+    seek_requested        = pyqtSignal(float)              # time_s
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -91,8 +94,9 @@ class _TimelineCanvas(QWidget):
         self._cursor_s: float = 0.0
         self._selected: int = -1
         self._active: int = -1       # line currently "playing through"
-        self._dragging: int = -1     # marker index being dragged
+        self._dragging: int = -1        # marker index being dragged
         self._drag_offset_px: float = 0.0
+        self._drag_start_time: float = 0.0  # time at start of drag (for undo)
         self._snap: bool = True
 
         self._update_width()
@@ -286,6 +290,7 @@ class _TimelineCanvas(QWidget):
         hit = self._find_marker_at(x)
         if hit >= 0:
             self._dragging = hit
+            self._drag_start_time = self._markers[hit].start_time
             self._drag_offset_px = x - self._time_to_x(self._markers[hit].start_time)
             self.marker_selected.emit(hit)
         else:
@@ -315,7 +320,13 @@ class _TimelineCanvas(QWidget):
         self.update()
 
     def mouseReleaseEvent(self, event) -> None:  # noqa: N802
-        self._dragging = -1
+        if self._dragging >= 0:
+            new_t = self._markers[self._dragging].start_time
+            if abs(new_t - self._drag_start_time) > 1e-9:
+                self.marker_drag_committed.emit(
+                    self._dragging, self._drag_start_time, new_t
+                )
+            self._dragging = -1
 
     def _find_marker_at(self, x: float) -> int:
         best, best_d = -1, HIT_RADIUS + 1
@@ -448,6 +459,88 @@ class _MarkerDetailArea(QWidget):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Undo commands
+# ──────────────────────────────────────────────────────────────────────────────
+
+class _MoveMarkerCommand(QUndoCommand):
+    def __init__(
+        self,
+        index: int,
+        old_t: float,
+        new_t: float,
+        markers: list,
+        canvas: _TimelineCanvas,
+        detail: _MarkerDetailArea,
+        duration_s: float,
+    ) -> None:
+        super().__init__(f"Move marker {index}")
+        self._index = index
+        self._old_t = old_t
+        self._new_t = new_t
+        self._markers = markers
+        self._canvas = canvas
+        self._detail = detail
+        self._duration_s = duration_s
+
+    def _apply(self, t: float) -> None:
+        self._markers[self._index].start_time = t
+        self._canvas.load(self._markers, self._duration_s)
+        self._canvas.set_selected(self._index)
+        if self._detail._index == self._index:
+            self._detail.load(self._index, self._markers, self._duration_s)
+
+    def redo(self) -> None:
+        self._apply(self._new_t)
+
+    def undo(self) -> None:
+        self._apply(self._old_t)
+
+
+class _EditTextCommand(QUndoCommand):
+    _BASE_ID = 1000  # combined with index to give per-marker merge id
+
+    def __init__(
+        self,
+        index: int,
+        old_text: str,
+        new_text: str,
+        markers: list,
+        canvas: _TimelineCanvas,
+        detail: _MarkerDetailArea,
+        duration_s: float,
+    ) -> None:
+        super().__init__(f"Edit text {index}")
+        self._index = index
+        self._old_text = old_text
+        self._new_text = new_text
+        self._markers = markers
+        self._canvas = canvas
+        self._detail = detail
+        self._duration_s = duration_s
+
+    def id(self) -> int:  # noqa: A003
+        return self._BASE_ID + self._index
+
+    def mergeWith(self, other: QUndoCommand) -> bool:  # noqa: N802
+        if other.id() != self.id():
+            return False
+        self._new_text = other._new_text  # type: ignore[attr-defined]
+        return True
+
+    def _apply(self, text: str) -> None:
+        self._markers[self._index].text = text
+        self._canvas.update()
+        if self._detail._index == self._index:
+            self._detail.load(self._index, self._markers, self._duration_s)
+
+    def redo(self) -> None:
+        self._apply(self._new_text)
+
+    def undo(self) -> None:
+        self._apply(self._old_text)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Top-level panel (public API)
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -469,6 +562,9 @@ class TimelineEditorPanel(QGroupBox):
         self._lyrics_path: str | None = None
         self._dirty        = False
         self._zoom         = 1.0           # multiplier on BASE_PX_PER_SEC
+
+        self._undo_stack = QUndoStack(self)
+        self._undo_stack.cleanChanged.connect(self._on_clean_changed)
 
         self._build_ui()
         self._connect_player()
@@ -495,6 +591,7 @@ class TimelineEditorPanel(QGroupBox):
             for line in data["lines"]
         ]
         self._dirty = False
+        self._undo_stack.clear()
 
         self._canvas.load(self._markers, self._duration_s)
         self._detail.load(-1, self._markers, self._duration_s)
@@ -511,6 +608,7 @@ class TimelineEditorPanel(QGroupBox):
         # Canvas (must exist before toolbar connects snap checkbox)
         self._canvas = _TimelineCanvas()
         self._canvas.marker_moved.connect(self._on_marker_moved)
+        self._canvas.marker_drag_committed.connect(self._on_marker_drag_committed)
         self._canvas.marker_selected.connect(self._on_marker_selected)
         self._canvas.seek_requested.connect(self._on_seek_requested)
 
@@ -611,8 +709,14 @@ class TimelineEditorPanel(QGroupBox):
     # ── marker canvas signals ─────────────────────────────────────────────────
 
     def _on_marker_moved(self, index: int, new_time: float) -> None:
-        self._mark_dirty()
+        # Live update during drag — no undo push yet (committed on mouseRelease)
         self._detail.load(index, self._markers, self._duration_s)
+
+    def _on_marker_drag_committed(self, index: int, old_t: float, new_t: float) -> None:
+        cmd = _MoveMarkerCommand(
+            index, old_t, new_t, self._markers, self._canvas, self._detail, self._duration_s
+        )
+        self._undo_stack.push(cmd)
 
     def _on_marker_selected(self, index: int) -> None:
         self._canvas.set_selected(index)
@@ -625,13 +729,16 @@ class TimelineEditorPanel(QGroupBox):
 
     def _on_text_changed(self, index: int, text: str) -> None:
         if 0 <= index < len(self._markers):
-            self._markers[index].text = text
-            self._canvas.update()
-            self._mark_dirty()
+            old_text = self._markers[index].text
+            cmd = _EditTextCommand(
+                index, old_text, text, self._markers, self._canvas, self._detail, self._duration_s
+            )
+            self._undo_stack.push(cmd)
 
     def _on_time_changed(self, index: int, new_t: float) -> None:
         if 0 <= index < len(self._markers):
             i = index
+            old_t = self._markers[i].start_time
             min_t = self._markers[i - 1].start_time + MIN_GAP_S if i > 0 else 0.0
             max_t = (
                 self._markers[i + 1].start_time - MIN_GAP_S
@@ -639,11 +746,11 @@ class TimelineEditorPanel(QGroupBox):
                 else self._duration_s
             )
             new_t = max(min_t, min(max_t, new_t))
-            self._markers[i].start_time = new_t
-            self._canvas.load(self._markers, self._duration_s)
-            self._canvas.set_selected(i)
-            self._detail.load(i, self._markers, self._duration_s)
-            self._mark_dirty()
+            if abs(new_t - old_t) > 1e-9:
+                cmd = _MoveMarkerCommand(
+                    i, old_t, new_t, self._markers, self._canvas, self._detail, self._duration_s
+                )
+                self._undo_stack.push(cmd)
 
     def _on_prev(self) -> None:
         idx = self._canvas._selected
@@ -665,8 +772,7 @@ class TimelineEditorPanel(QGroupBox):
         except Exception as exc:
             QMessageBox.critical(self, "Save Error", str(exc))
             return
-        self._dirty = False
-        self._detail.set_dirty(False)
+        self._undo_stack.setClean()   # triggers _on_clean_changed(True)
 
     def _write_lyrics(self, path: str) -> None:
         filepath = Path(path)
@@ -685,10 +791,21 @@ class TimelineEditorPanel(QGroupBox):
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
-    # ── dirty tracking ────────────────────────────────────────────────────────
+    # ── dirty / undo ──────────────────────────────────────────────────────────
 
-    def _mark_dirty(self) -> None:
-        if not self._dirty:
-            self._dirty = True
-            self._detail.set_dirty(True)
+    def _on_clean_changed(self, clean: bool) -> None:
+        self._dirty = not clean
+        self._detail.set_dirty(self._dirty)
+        if self._dirty:
             self.lyrics_modified.emit()
+
+    # ── public API for MainWindow ─────────────────────────────────────────────
+
+    def undo(self) -> None:
+        self._undo_stack.undo()
+
+    def redo(self) -> None:
+        self._undo_stack.redo()
+
+    def save_lyrics(self) -> None:
+        self._on_save()

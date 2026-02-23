@@ -6,6 +6,7 @@ import subprocess
 import sys
 import threading
 from pathlib import Path
+from typing import Callable
 
 from PyQt6.QtCore import QObject, QThread, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -98,6 +99,7 @@ class ExportBar(QWidget):
         self._theme: Theme = load_theme()
         self._thread: QThread | None = None
         self._worker: _ExportWorker | None = None
+        self._pre_export_check: Callable[[], bool] | None = None
         self._build_ui()
 
     # ──────────────────────────────────────────────────────────────────
@@ -113,6 +115,10 @@ class ExportBar(QWidget):
             self._filename_edit.setText(Path(audio).stem + ".mp4")
         self._export_btn.setEnabled(True)
         self._update_status("Ready")
+
+    def set_pre_export_check(self, fn: Callable[[], bool]) -> None:
+        """Register a callback called before export starts; return False to abort."""
+        self._pre_export_check = fn
 
     def on_theme_changed(self, theme: Theme) -> None:
         self._theme = theme
@@ -217,6 +223,9 @@ class ExportBar(QWidget):
             )
             if ans != QMessageBox.StandardButton.Yes:
                 return
+
+        if self._pre_export_check is not None and not self._pre_export_check():
+            return
 
         fps = int(self._fps_combo.currentText())
 

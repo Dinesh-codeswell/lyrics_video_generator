@@ -132,13 +132,15 @@ class _CollapsibleSection(QWidget):
 class ThemeEditorPanel(QGroupBox):
     """Right-sidebar panel for live editing of all theme properties."""
 
-    theme_changed = pyqtSignal(object)  # emits Theme on any change
+    theme_changed      = pyqtSignal(object)  # emits Theme on any change
+    theme_dirty_changed = pyqtSignal(bool)   # True = has unsaved changes
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__("Theme Editor", parent)
         self._theme: Theme = load_theme()
         self._filepath: Path | None = None
         self._blocking: bool = False
+        self._dirty: bool = False
         self._build_ui()
         self._populate_controls()
 
@@ -175,11 +177,20 @@ class ThemeEditorPanel(QGroupBox):
         try:
             with open(self._filepath, "w", encoding="utf-8") as fh:
                 json.dump(data, fh, indent=2)
+            self._set_theme_dirty(False)
         except OSError as exc:
             QMessageBox.critical(self, "Save Error", str(exc))
 
     def get_theme(self) -> Theme:
         return self._theme
+
+    def is_dirty(self) -> bool:
+        return self._dirty
+
+    def _set_theme_dirty(self, dirty: bool) -> None:
+        if dirty != self._dirty:
+            self._dirty = dirty
+            self.theme_dirty_changed.emit(dirty)
 
     # ──────────────────────────────────────────────────────────────────
     # UI construction
@@ -438,6 +449,8 @@ class ThemeEditorPanel(QGroupBox):
         finally:
             self._blocking = False
 
+        self._set_theme_dirty(False)
+
     # ──────────────────────────────────────────────────────────────────
     # Sync helpers (prevent double-fire between slider and spinbox)
     # ──────────────────────────────────────────────────────────────────
@@ -468,42 +481,51 @@ class ThemeEditorPanel(QGroupBox):
 
     def _on_bg_color_changed(self, hex_str: str) -> None:
         self._theme.background_color = hex_str
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 
     def _on_overlay_opacity_changed(self, value: int) -> None:
         self._theme.text_overlay_opacity = int(value)
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 
     def _on_overlay_color_changed(self, hex_str: str) -> None:
         self._theme.text_overlay_color = hex_str
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 
     def _on_text_color_changed(self, hex_str: str) -> None:
         self._theme.text_color = hex_str
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 
     def _on_font_family_changed(self, family: str) -> None:
         if self._blocking:
             return
         self._theme.font_family = family
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 
     def _on_font_size_changed(self, value: int) -> None:
         self._theme.font_size = int(value)
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 
     def _on_spacing_changed(self, value: float) -> None:
         self._theme.line_spacing = round(float(value), 1)
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 
     def _on_active_color_changed(self, hex_str: str) -> None:
         self._theme.active_text_color = hex_str
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 
     def _on_active_bold_changed(self, checked: bool) -> None:
         if self._blocking:
             return
         self._theme.active_text_bold = checked
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 
     def _on_active_glow_changed(self, checked: bool) -> None:
@@ -511,10 +533,12 @@ class ThemeEditorPanel(QGroupBox):
             return
         self._glow_color_btn.setEnabled(checked)
         self._theme.active_text_glow = checked
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 
     def _on_glow_color_changed(self, hex_str: str) -> None:
         self._theme.active_glow_color = hex_str
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 
     def _on_inactive_changed(self, index: int, value: float) -> None:
@@ -522,18 +546,21 @@ class ThemeEditorPanel(QGroupBox):
         while len(grad) <= index:
             grad.append(0.0)
         grad[index] = round(float(value), 2)
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 
     def _on_position_changed(self, value: str) -> None:
         if self._blocking:
             return
         self._theme.lyric_position = value
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 
     def _on_highlight_changed(self, value: str) -> None:
         if self._blocking:
             return
         self._theme.highlight_mode = value
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 
     # ──────────────────────────────────────────────────────────────────
@@ -551,4 +578,5 @@ class ThemeEditorPanel(QGroupBox):
         self._theme = load_theme()
         self._filepath = None
         self._populate_controls()
+        self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
