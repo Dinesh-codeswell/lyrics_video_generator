@@ -14,6 +14,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.gui.panels.song_selector import SongSelectorPanel
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -58,7 +60,9 @@ class MainWindow(QMainWindow):
     def _build_central_widget(self) -> QSplitter:
         outer = QSplitter(Qt.Orientation.Horizontal)
 
-        outer.addWidget(self._make_placeholder("Song Selector", "Issue #27"))
+        self._song_selector = SongSelectorPanel()
+        self._song_selector.song_loaded.connect(self._on_song_loaded)
+        outer.addWidget(self._song_selector)
         outer.addWidget(self._build_center_splitter())
         outer.addWidget(self._make_placeholder("Theme Editor", "Issue #30"))
 
@@ -117,6 +121,9 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Menu actions (stubs for future issues)
     # ------------------------------------------------------------------
+
+    def _on_song_loaded(self, paths: dict):
+        pass
 
     def _on_new(self):
         pass

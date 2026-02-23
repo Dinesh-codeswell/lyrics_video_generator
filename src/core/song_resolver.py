@@ -1,5 +1,6 @@
 """Auto-match song files from the input/ directory structure."""
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import click
@@ -11,6 +12,42 @@ INPUT_LYRICS_DIR = PROJECT_ROOT / "input" / "lyrics"
 INPUT_BACKGROUNDS_DIR = PROJECT_ROOT / "input" / "backgrounds"
 
 AUDIO_EXTENSIONS = (".mp3", ".wav")
+
+
+@dataclass
+class SongInfo:
+    name: str
+    has_lyrics: bool
+    has_audio: bool
+    has_background: bool
+
+    @property
+    def is_loadable(self) -> bool:
+        return self.has_lyrics and self.has_audio
+
+
+def scan_songs() -> list[SongInfo]:
+    """Scan input/ directories and return all discovered songs.
+
+    A song is discovered if it has at least a lyrics JSON or an audio file.
+    Returns a list sorted by song name.
+    """
+    names: set[str] = set()
+    for p in INPUT_LYRICS_DIR.glob("*.json"):
+        names.add(p.stem)
+    for ext in AUDIO_EXTENSIONS:
+        for p in INPUT_AUDIO_DIR.glob(f"*{ext}"):
+            names.add(p.stem)
+
+    songs = []
+    for name in sorted(names):
+        songs.append(SongInfo(
+            name=name,
+            has_lyrics=(INPUT_LYRICS_DIR / f"{name}.json").exists(),
+            has_audio=_find_audio(name) is not None,
+            has_background=(INPUT_BACKGROUNDS_DIR / f"{name}.mp4").exists(),
+        ))
+    return songs
 
 
 def resolve_song(
