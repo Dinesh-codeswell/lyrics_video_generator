@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.gui.audio_player import AudioPlayer
+from src.gui.panels.preview_panel import PreviewPanel
 from src.gui.panels.song_selector import SongSelectorPanel
 from src.gui.panels.theme_editor import ThemeEditorPanel
 from src.gui.panels.timeline_editor import TimelineEditorPanel
@@ -75,13 +76,17 @@ class MainWindow(QMainWindow):
         self._theme_editor = ThemeEditorPanel()
         outer.addWidget(self._theme_editor)
 
+        # Connect theme changes to preview staleness tracking (both panels now exist)
+        self._theme_editor.theme_changed.connect(self._preview.on_theme_changed)
+
         outer.setSizes([250, 760, 270])
         outer.setChildrenCollapsible(False)
         return outer
 
     def _build_center_splitter(self) -> QSplitter:
         center = QSplitter(Qt.Orientation.Vertical)
-        center.addWidget(self._make_placeholder("Preview", "Issue #31"))
+        self._preview = PreviewPanel()
+        center.addWidget(self._preview)
         self._timeline = TimelineEditorPanel(self._audio_player)
         center.addWidget(self._timeline)
         center.setSizes([400, 260])
@@ -136,6 +141,7 @@ class MainWindow(QMainWindow):
         if paths.get("audio"):
             self._audio_player.load(paths["audio"])
         self._timeline.load_song(paths)
+        self._preview.song_loaded(paths)
 
     def _on_new(self):
         pass

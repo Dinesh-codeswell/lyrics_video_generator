@@ -11,7 +11,7 @@ from src.animations.scroll import ScrollingAnimation
 from src.core.audio_handler import load_audio
 from src.core.lyrics_parser import parse_lyrics
 from src.core.text_renderer import TextRenderer
-from src.core.theme_loader import load_theme
+from src.core.theme_loader import Theme, load_theme
 
 FPS_DEFAULT = 30
 
@@ -66,11 +66,14 @@ def generate_video(
     audio_path: str | Path,
     output_path: str | Path,
     theme_path: str | Path | None = None,
+    theme: Theme | None = None,
     fps: int = FPS_DEFAULT,
     preview: bool = False,
+    preview_start: float = 0.0,
     background_path: str | Path | None = None,
     lyric_position: str | None = None,
     highlight_mode: str | None = None,
+    logger: str | None = "bar",
 ) -> Path:
     """Generate a lyric video from lyrics JSON and an audio file.
 
@@ -89,17 +92,17 @@ def generate_video(
     # Load inputs
     lyrics_data = parse_lyrics(lyrics_path)
     audio = load_audio(audio_path)
-    theme = load_theme(theme_path)
+    theme_obj = theme if theme is not None else load_theme(theme_path)
     if lyric_position is not None:
-        theme.lyric_position = lyric_position
+        theme_obj.lyric_position = lyric_position
     if highlight_mode is not None:
-        theme.highlight_mode = highlight_mode
-    renderer = TextRenderer(theme)
+        theme_obj.highlight_mode = highlight_mode
+    renderer = TextRenderer(theme_obj)
 
     lines = lyrics_data["lines"]
     total_duration = audio.duration
     if preview:
-        total_duration = min(total_duration, 30.0)
+        total_duration = max(min(audio.duration - preview_start, 30.0), 0.0)
         # Keep all lines — those beyond total_duration are never reached by
         # make_frame(t) but are needed so the scroll queue shows upcoming lines
         # right up to the end of the preview window.
@@ -117,18 +120,20 @@ def generate_video(
     animation = ScrollingAnimation(
         lines=lines,
         fps=fps,
-        line_height=theme.line_height,
-        inactive_alphas=theme.inactive_text_opacity_gradient,
+        line_height=theme_obj.line_height,
+        inactive_alphas=theme_obj.inactive_text_opacity_gradient,
     )
 
     def make_frame(t: float):
-        bg = bg_frame_getter(t) if bg_frame_getter is not None else None
-        return animation.make_frame(t, renderer, background=bg)
+        actual_t = t + preview_start if preview else t
+        bg = bg_frame_getter(actual_t) if bg_frame_getter is not None else None
+        return animation.make_frame(actual_t, renderer, background=bg)
 
     # Build video clip
+    audio_start = preview_start if preview else 0.0
     video = VideoClip(frame_function=make_frame, duration=total_duration)
     video = video.with_fps(fps)
-    video = video.with_audio(audio.subclipped(0, total_duration))
+    video = video.with_audio(audio.subclipped(audio_start, audio_start + total_duration))
 
     # Ensure output directory exists
     output_path = Path(output_path)
@@ -141,7 +146,7 @@ def generate_video(
         fps=fps,
         codec="libx264",
         audio_codec="aac",
-        logger="bar",
+        logger=logger,
     )
 
     print(f"Done! Video saved to {output_path}")
