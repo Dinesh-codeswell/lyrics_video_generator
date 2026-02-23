@@ -14,7 +14,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.gui.audio_player import AudioPlayer
 from src.gui.panels.song_selector import SongSelectorPanel
+from src.gui.panels.transport_controls import TransportControls
 
 
 class MainWindow(QMainWindow):
@@ -26,12 +28,15 @@ class MainWindow(QMainWindow):
 
         self._build_menu_bar()
 
+        self._audio_player = AudioPlayer(self)
+
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)
 
         layout.addWidget(self._build_central_widget(), stretch=1)
+        layout.addWidget(TransportControls(self._audio_player))
         layout.addWidget(self._build_export_bar())
 
         self.setCentralWidget(container)
@@ -123,7 +128,8 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _on_song_loaded(self, paths: dict):
-        pass
+        if paths.get("audio"):
+            self._audio_player.load(paths["audio"])
 
     def _on_new(self):
         pass
