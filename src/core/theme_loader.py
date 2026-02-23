@@ -19,6 +19,8 @@ DEFAULTS = {
     "lyric_position": "center",
     "highlight_mode": "line",
     "highlight_dim_alpha": 0.3,
+    "text_overlay_opacity": 0,       # int 0-100
+    "text_overlay_color": "#000000",
     # Kept for backward compatibility
     "text_position": "center",
     "text_shadow": False,
@@ -44,6 +46,8 @@ class Theme:
     lyric_position: str = "center"
     highlight_mode: str = "line"
     highlight_dim_alpha: float = 0.3
+    text_overlay_opacity: int = 0
+    text_overlay_color: str = "#000000"
     # Backward-compat fields
     text_position: str = "center"
     text_shadow: bool = False
@@ -152,6 +156,8 @@ def load_theme(filepath: str | Path | None = None) -> Theme:
             lyric_position=DEFAULTS["lyric_position"],
             highlight_mode=DEFAULTS["highlight_mode"],
             highlight_dim_alpha=DEFAULTS["highlight_dim_alpha"],
+            text_overlay_opacity=DEFAULTS["text_overlay_opacity"],
+            text_overlay_color=DEFAULTS["text_overlay_color"],
             text_position=DEFAULTS["text_position"],
             text_shadow=DEFAULTS["text_shadow"],
             text_shadow_color=DEFAULTS["text_shadow_color"],
@@ -193,6 +199,8 @@ def load_theme(filepath: str | Path | None = None) -> Theme:
         lyric_position=merged["lyric_position"],
         highlight_mode=merged["highlight_mode"],
         highlight_dim_alpha=merged["highlight_dim_alpha"],
+        text_overlay_opacity=merged["text_overlay_opacity"],
+        text_overlay_color=merged["text_overlay_color"],
         text_position=merged["text_position"],
         text_shadow=merged["text_shadow"],
         text_shadow_color=merged["text_shadow_color"],

@@ -2,6 +2,7 @@
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
+    QFileDialog,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -16,6 +17,7 @@ from PyQt6.QtWidgets import (
 
 from src.gui.audio_player import AudioPlayer
 from src.gui.panels.song_selector import SongSelectorPanel
+from src.gui.panels.theme_editor import ThemeEditorPanel
 from src.gui.panels.timeline_editor import TimelineEditorPanel
 from src.gui.panels.transport_controls import TransportControls
 
@@ -70,7 +72,8 @@ class MainWindow(QMainWindow):
         self._song_selector.song_loaded.connect(self._on_song_loaded)
         outer.addWidget(self._song_selector)
         outer.addWidget(self._build_center_splitter())
-        outer.addWidget(self._make_placeholder("Theme Editor", "Issue #30"))
+        self._theme_editor = ThemeEditorPanel()
+        outer.addWidget(self._theme_editor)
 
         outer.setSizes([250, 760, 270])
         outer.setChildrenCollapsible(False)
@@ -138,10 +141,14 @@ class MainWindow(QMainWindow):
         pass
 
     def _on_open_theme(self):
-        pass
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Open Theme", "themes/", "JSON (*.json)"
+        )
+        if path:
+            self._theme_editor.load_theme_file(path)
 
     def _on_save_theme(self):
-        pass
+        self._theme_editor.save_theme()
 
     def _on_about(self):
         QMessageBox.about(
