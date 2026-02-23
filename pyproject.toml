@@ -12,10 +12,12 @@ dependencies = [
     "Pillow>=10.0.0",
     "click>=8.0.0",
     "numpy>=1.24.0",
+    "PyQt6>=6.6.0",
 ]
 
 [project.scripts]
 lyric-video = "src.cli.main:cli"
+lyric-video-gui = "src.gui.main:main"
 
 [tool.setuptools.packages.find]
 include = ["src*"]
