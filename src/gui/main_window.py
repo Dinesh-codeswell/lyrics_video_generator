@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 
 from src.gui.audio_player import AudioPlayer
 from src.gui.panels.song_selector import SongSelectorPanel
+from src.gui.panels.timeline_editor import TimelineEditorPanel
 from src.gui.panels.transport_controls import TransportControls
 
 
@@ -78,7 +79,8 @@ class MainWindow(QMainWindow):
     def _build_center_splitter(self) -> QSplitter:
         center = QSplitter(Qt.Orientation.Vertical)
         center.addWidget(self._make_placeholder("Preview", "Issue #31"))
-        center.addWidget(self._make_placeholder("Timeline Editor", "Issue #29"))
+        self._timeline = TimelineEditorPanel(self._audio_player)
+        center.addWidget(self._timeline)
         center.setSizes([400, 260])
         center.setChildrenCollapsible(False)
         return center
@@ -130,6 +132,7 @@ class MainWindow(QMainWindow):
     def _on_song_loaded(self, paths: dict):
         if paths.get("audio"):
             self._audio_player.load(paths["audio"])
+        self._timeline.load_song(paths)
 
     def _on_new(self):
         pass

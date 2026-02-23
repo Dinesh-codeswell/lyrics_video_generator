@@ -25,8 +25,8 @@ class AudioPlayer(QObject):
         self._player.setAudioOutput(self._audio_output)
         self._audio_output.setVolume(1.0)
 
-        self._player.positionChanged.connect(self.position_changed)
-        self._player.durationChanged.connect(self.duration_changed)
+        self._player.positionChanged.connect(lambda pos: self.position_changed.emit(int(pos)))
+        self._player.durationChanged.connect(lambda dur: self.duration_changed.emit(int(dur)))
         self._player.playbackStateChanged.connect(self.playback_state_changed)
 
     # ------------------------------------------------------------------
