@@ -4,18 +4,16 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QFileDialog,
     QGroupBox,
-    QHBoxLayout,
     QLabel,
     QMainWindow,
     QMessageBox,
-    QProgressBar,
-    QPushButton,
     QSplitter,
     QVBoxLayout,
     QWidget,
 )
 
 from src.gui.audio_player import AudioPlayer
+from src.gui.panels.export_bar import ExportBar
 from src.gui.panels.preview_panel import PreviewPanel
 from src.gui.panels.song_selector import SongSelectorPanel
 from src.gui.panels.theme_editor import ThemeEditorPanel
@@ -41,7 +39,10 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(self._build_central_widget(), stretch=1)
         layout.addWidget(TransportControls(self._audio_player))
-        layout.addWidget(self._build_export_bar())
+        self._export_bar = ExportBar()
+        layout.addWidget(self._export_bar)
+        # Connect theme changes to export bar
+        self._theme_editor.theme_changed.connect(self._export_bar.on_theme_changed)
 
         self.setCentralWidget(container)
 
@@ -94,32 +95,6 @@ class MainWindow(QMainWindow):
         return center
 
     # ------------------------------------------------------------------
-    # Export bar
-    # ------------------------------------------------------------------
-
-    def _build_export_bar(self) -> QWidget:
-        bar = QWidget()
-        bar.setFixedHeight(52)
-        layout = QHBoxLayout(bar)
-        layout.setContentsMargins(8, 4, 8, 4)
-        layout.setSpacing(8)
-
-        progress = QProgressBar()
-        progress.setValue(0)
-        progress.setEnabled(False)
-        progress.setTextVisible(True)
-        progress.setFormat("Ready")
-
-        export_btn = QPushButton("Export Video")
-        export_btn.setEnabled(False)
-        export_btn.setFixedWidth(120)
-
-        layout.addWidget(QLabel("Export Controls (Issue #32):"))
-        layout.addWidget(progress, stretch=1)
-        layout.addWidget(export_btn)
-        return bar
-
-    # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 
@@ -142,6 +117,7 @@ class MainWindow(QMainWindow):
             self._audio_player.load(paths["audio"])
         self._timeline.load_song(paths)
         self._preview.song_loaded(paths)
+        self._export_bar.song_loaded(paths)
 
     def _on_new(self):
         pass

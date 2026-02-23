@@ -1,7 +1,12 @@
 """Main video generation engine."""
 
+import threading
 from pathlib import Path
 from typing import Callable
+
+
+class RenderCancelled(Exception):
+    """Raised inside make_frame when the caller requests cancellation."""
 
 import numpy as np
 from PIL import Image
@@ -74,6 +79,8 @@ def generate_video(
     lyric_position: str | None = None,
     highlight_mode: str | None = None,
     logger: str | None = "bar",
+    progress_callback: Callable[[int, int], None] | None = None,
+    cancel_event: threading.Event | None = None,
 ) -> Path:
     """Generate a lyric video from lyrics JSON and an audio file.
 
@@ -124,10 +131,19 @@ def generate_video(
         inactive_alphas=theme_obj.inactive_text_opacity_gradient,
     )
 
+    total_frames = max(int(total_duration * fps), 1)
+    _frame_count: list[int] = [0]
+
     def make_frame(t: float):
+        if cancel_event is not None and cancel_event.is_set():
+            raise RenderCancelled
         actual_t = t + preview_start if preview else t
         bg = bg_frame_getter(actual_t) if bg_frame_getter is not None else None
-        return animation.make_frame(actual_t, renderer, background=bg)
+        result = animation.make_frame(actual_t, renderer, background=bg)
+        _frame_count[0] += 1
+        if progress_callback is not None:
+            progress_callback(min(_frame_count[0], total_frames), total_frames)
+        return result
 
     # Build video clip
     audio_start = preview_start if preview else 0.0
