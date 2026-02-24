@@ -51,9 +51,18 @@ Or use explicit paths:
 lyric-video --lyrics input/lyrics/disciples-of-dysfunction.json \
             --audio input/audio/disciples-of-dysfunction.mp3 \
             --theme themes/durt_nurs.json \
-            --animation fade \
             --output output/video.mp4
 ```
+
+### GUI
+
+A desktop GUI is also available:
+
+```bash
+lyric-video-gui
+```
+
+The GUI provides a song browser, visual timeline editor with draggable markers, live theme editor, embedded preview player, and export controls — all backed by the same rendering engine as the CLI.
 
 ### Options
 
@@ -67,6 +76,7 @@ lyric-video --lyrics input/lyrics/disciples-of-dysfunction.json \
 | `--theme` | No | `themes/durt_nurs.json` | Path to theme JSON |
 | `--lyric-position` | No | theme default | Text alignment: `left`, `center`, or `right` (overrides theme) |
 | `--highlight-mode` | No | theme default | Active line style: `line`, `word`, or `character` (overrides theme) |
+| `--text-overlay` | No | `0` | Opacity (0–100) of semi-transparent strip behind lyrics |
 | `--output` | No | `output/<title>.mp4` | Output file path |
 | `--fps` | No | `30` | Frame rate |
 | `--preview` | No | off | Generate only first 30 seconds |
@@ -157,7 +167,9 @@ Themes are JSON files that control the visual style. The default theme is `theme
   "font_size": 72,
   "line_spacing": 1.5,
   "lyric_position": "center",
-  "highlight_mode": "line"
+  "highlight_mode": "line",
+  "text_overlay_opacity": 0,
+  "text_overlay_color": "#000000"
 }
 ```
 
@@ -202,6 +214,13 @@ Themes are JSON files that control the visual style. The default theme is `theme
 | `highlight_mode` | How the active line is highlighted: `line` (full line), `word`, or `character` | `line` |
 | `highlight_dim_alpha` | Opacity of un-highlighted tokens in `word`/`character` mode (0.0–1.0) | `0.3` |
 
+**Text Overlay**
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `text_overlay_opacity` | Opacity (0–100) of the semi-transparent strip behind the lyrics column | `0` |
+| `text_overlay_color` | Hex color of the overlay | `#000000` |
+
 **Text Shadow**
 
 | Property | Description | Default |
@@ -223,12 +242,18 @@ lyric-video-generator/
 │   │   ├── theme_loader.py       # theme JSON loading with defaults
 │   │   └── song_resolver.py      # auto-match song files from input/
 │   ├── animations/
-│   │   ├── base.py               # base animation class
-│   │   ├── fade.py               # fade in/out
-│   │   ├── slide.py              # slide up/down
-│   │   └── typewriter.py         # typewriter effect
-│   └── cli/
-│       └── main.py               # CLI entry point
+│   │   └── scroll.py             # continuous scrolling animation
+│   ├── cli/
+│   │   └── main.py               # CLI entry point (lyric-video)
+│   └── gui/
+│       ├── main.py               # GUI entry point (lyric-video-gui)
+│       ├── main_window.py        # main application window
+│       └── panels/
+│           ├── song_selector.py  # song browser sidebar
+│           ├── timeline_editor.py # visual timeline with draggable markers
+│           ├── theme_editor.py   # theme property controls
+│           ├── preview_panel.py  # embedded video preview
+│           └── export_bar.py     # export settings and progress
 ├── input/
 │   ├── audio/                    # MP3/WAV song files (gitignored)
 │   ├── lyrics/                   # lyrics JSON files (gitignored)
