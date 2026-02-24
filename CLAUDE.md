@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Python CLI tool that generates YouTube-ready 1080p lyric videos from a JSON lyrics file and audio track, with configurable text animations and themes. Output is MP4 (libx264/AAC).
+Python CLI and PyQt6 desktop GUI that generates YouTube-ready 1080p lyric videos from a JSON lyrics file and audio track, with configurable text animations and themes. Output is MP4 (libx264/AAC).
 
 ## Commands
 
@@ -45,6 +45,15 @@ No test suite or linting is currently configured.
 **Animation system** (`src/animations/`):
 - `scroll.py` — `ScrollingAnimation`. Continuous scrolling view; active line centered, adjacent lines visible at decreasing opacity. Smooth eased transitions between lines.
 
+**GUI** (`src/gui/`):
+- `main.py` — Entry point for `lyric-video-gui`. Launches the PyQt6 `MainWindow`.
+- `main_window.py` — Top-level window. Owns all panels, wires cross-panel signals, manages dirty-state tracking (lyrics + theme), window title indicator, `closeEvent` prompt, and keyboard shortcuts (⌘S/⌘⇧S/⌘Z/⌘⇧Z/Space).
+- `panels/song_selector.py` — Scans `input/` folders, lists songs with file-presence indicators, emits `song_loaded(dict)` on selection.
+- `panels/timeline_editor.py` — Visual timeline with draggable markers. Uses `QUndoStack` + command pattern (`_MoveMarkerCommand`, `_EditTextCommand`) for undo/redo. Emits `lyrics_modified` when dirty.
+- `panels/theme_editor.py` — Collapsible-section controls for all theme properties. Emits `theme_changed(Theme)` on every edit; `theme_dirty_changed(bool)` for save-state tracking.
+- `panels/preview_panel.py` — Renders a preview clip on a `QThread` worker, plays it back via `QVideoWidget`/`QMediaPlayer`. Shows a stale indicator (⚠) when theme or lyrics change after the last render.
+- `panels/export_bar.py` — Export settings (filename, dir, FPS), progress bar, cancel support via `threading.Event`. Calls a `pre_export_check` callback (set by `MainWindow`) before starting.
+
 **Data formats:**
 - Lyrics: JSON with `title`, `artist`, `lyrics[]` (each entry has `time` in seconds and `text`). See `input/lyrics/disciples-of-dysfunction.json`.
 - Themes: JSON with properties for colors, fonts, layout, highlighting, and overlay. See `themes/durt_nurs.json` and the README for the full schema.
@@ -52,7 +61,7 @@ No test suite or linting is currently configured.
 ## Key Conventions
 
 - moviepy v2.0+ API: use `with_fps()`, `with_audio()`, `VideoClip(frame_function)` — not the deprecated v1 methods.
-- Python 3.10+ required. Dependencies: moviepy, Pillow, click, numpy.
+- Python 3.10+ required. Dependencies: moviepy, Pillow, click, numpy, PyQt6.
 - Preview mode renders first 30 seconds only.
 - Input directories are `input/audio/`, `input/lyrics/`, `input/backgrounds/` (contents gitignored, structure kept via `.gitkeep`).
 - Output directory is `output/` (gitignored).
