@@ -540,6 +540,68 @@ class _EditTextCommand(QUndoCommand):
         self._apply(self._old_text)
 
 
+class _InsertMarkerCommand(QUndoCommand):
+    def __init__(
+        self,
+        after_index: int,
+        new_marker: "_Marker",
+        markers: list,
+        canvas: _TimelineCanvas,
+        detail: "_MarkerDetailArea",
+        duration_s: float,
+    ) -> None:
+        super().__init__("Insert marker")
+        self._after  = after_index
+        self._marker = new_marker
+        self._markers  = markers
+        self._canvas   = canvas
+        self._detail   = detail
+        self._duration_s = duration_s
+
+    def redo(self) -> None:
+        self._markers.insert(self._after + 1, self._marker)
+        self._canvas.load(self._markers, self._duration_s)
+        self._canvas.set_selected(self._after + 1)
+        self._detail.load(self._after + 1, self._markers, self._duration_s)
+
+    def undo(self) -> None:
+        self._markers.pop(self._after + 1)
+        self._canvas.load(self._markers, self._duration_s)
+        self._canvas.set_selected(self._after)
+        self._detail.load(self._after, self._markers, self._duration_s)
+
+
+class _DeleteMarkerCommand(QUndoCommand):
+    def __init__(
+        self,
+        index: int,
+        markers: list,
+        canvas: _TimelineCanvas,
+        detail: "_MarkerDetailArea",
+        duration_s: float,
+    ) -> None:
+        super().__init__("Delete marker")
+        self._index  = index
+        self._saved  = _Marker(start_time=markers[index].start_time, text=markers[index].text)
+        self._markers  = markers
+        self._canvas   = canvas
+        self._detail   = detail
+        self._duration_s = duration_s
+
+    def redo(self) -> None:
+        self._markers.pop(self._index)
+        self._canvas.load(self._markers, self._duration_s)
+        new_sel = min(self._index, len(self._markers) - 1)
+        self._canvas.set_selected(new_sel)
+        self._detail.load(new_sel, self._markers, self._duration_s)
+
+    def undo(self) -> None:
+        self._markers.insert(self._index, self._saved)
+        self._canvas.load(self._markers, self._duration_s)
+        self._canvas.set_selected(self._index)
+        self._detail.load(self._index, self._markers, self._duration_s)
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Top-level panel (public API)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -562,6 +624,7 @@ class TimelineEditorPanel(QGroupBox):
         self._lyrics_path: str | None = None
         self._dirty        = False
         self._zoom         = 1.0           # multiplier on BASE_PX_PER_SEC
+        self._stamp_cursor = 0             # next marker index to stamp via Enter
 
         self._undo_stack = QUndoStack(self)
         self._undo_stack.cleanChanged.connect(self._on_clean_changed)
@@ -591,6 +654,7 @@ class TimelineEditorPanel(QGroupBox):
             for line in data["lines"]
         ]
         self._dirty = False
+        self._stamp_cursor = 0
         self._undo_stack.clear()
 
         self._canvas.load(self._markers, self._duration_s)
@@ -656,6 +720,21 @@ class TimelineEditorPanel(QGroupBox):
         row.addWidget(self._snap_cb)
 
         row.addStretch()
+
+        self._insert_btn = QPushButton("+ Insert")
+        self._insert_btn.setFixedWidth(72)
+        self._insert_btn.setToolTip("Insert a new blank marker after the selected one")
+        self._insert_btn.setEnabled(False)
+        self._insert_btn.clicked.connect(self._on_insert)
+        row.addWidget(self._insert_btn)
+
+        self._delete_btn = QPushButton("− Delete")
+        self._delete_btn.setFixedWidth(72)
+        self._delete_btn.setToolTip("Delete the selected marker")
+        self._delete_btn.setEnabled(False)
+        self._delete_btn.clicked.connect(self._on_delete)
+        row.addWidget(self._delete_btn)
+
         return row
 
     # ── AudioPlayer connection ────────────────────────────────────────────────
@@ -721,6 +800,11 @@ class TimelineEditorPanel(QGroupBox):
     def _on_marker_selected(self, index: int) -> None:
         self._canvas.set_selected(index)
         self._detail.load(index, self._markers, self._duration_s)
+        if index >= 0:
+            self._stamp_cursor = index
+        has_sel = index >= 0
+        self._insert_btn.setEnabled(has_sel)
+        self._delete_btn.setEnabled(has_sel)
 
     def _on_seek_requested(self, time_s: float) -> None:
         self._player.seek(int(time_s * 1000))
@@ -761,6 +845,34 @@ class TimelineEditorPanel(QGroupBox):
         idx = self._canvas._selected
         if 0 <= idx < len(self._markers) - 1:
             self._on_marker_selected(idx + 1)
+
+    def _on_insert(self) -> None:
+        idx = self._canvas._selected
+        if idx < 0 or not self._markers:
+            return
+        end_t = (
+            self._markers[idx + 1].start_time
+            if idx + 1 < len(self._markers)
+            else self._duration_s
+        )
+        new_t = (self._markers[idx].start_time + end_t) / 2.0
+        new_marker = _Marker(start_time=new_t, text="")
+        cmd = _InsertMarkerCommand(
+            idx, new_marker, self._markers, self._canvas, self._detail, self._duration_s
+        )
+        self._undo_stack.push(cmd)
+        self._stamp_cursor = idx + 1
+
+    def _on_delete(self) -> None:
+        idx = self._canvas._selected
+        if idx < 0 or not self._markers:
+            return
+        cmd = _DeleteMarkerCommand(
+            idx, self._markers, self._canvas, self._detail, self._duration_s
+        )
+        self._undo_stack.push(cmd)
+        if self._stamp_cursor > idx:
+            self._stamp_cursor = max(0, self._stamp_cursor - 1)
 
     # ── save ──────────────────────────────────────────────────────────────────
 
@@ -803,9 +915,56 @@ class TimelineEditorPanel(QGroupBox):
 
     def undo(self) -> None:
         self._undo_stack.undo()
+        # Undo calls canvas.set_selected() directly, bypassing _on_marker_selected.
+        # Sync _stamp_cursor so the next Enter re-stamps the undone marker.
+        idx = self._canvas._selected
+        if idx >= 0:
+            self._stamp_cursor = idx
 
     def redo(self) -> None:
         self._undo_stack.redo()
+        # After redo the redone marker is selected; advance cursor past it.
+        idx = self._canvas._selected
+        if idx >= 0:
+            self._stamp_cursor = idx + 1
 
     def save_lyrics(self) -> None:
         self._on_save()
+
+    def stamp_current(self) -> None:
+        """Stamp the selected marker to the current playback position, then advance selection.
+
+        If a marker is explicitly selected, stamp that one and sync the stamp
+        cursor to it.  If nothing is selected, resume from the stamp cursor so
+        that seeking (which clears the selection) never accidentally resets
+        stamping back to marker 0.
+        """
+        if not self._markers:
+            return
+
+        idx = self._canvas._selected
+        if idx < 0:
+            # Nothing selected — resume from where we left off, not from 0.
+            idx = self._stamp_cursor
+            if idx >= len(self._markers):
+                return
+            self._on_marker_selected(idx)
+
+        new_t = self._canvas._cursor_s
+        old_t = self._markers[idx].start_time
+
+        # Only clamp against the previous marker — the next marker hasn't been
+        # stamped yet, so its current position must not constrain this stamp.
+        min_t = self._markers[idx - 1].start_time + MIN_GAP_S if idx > 0 else 0.0
+        new_t = max(min_t, new_t)
+
+        if abs(new_t - old_t) > 1e-9:
+            cmd = _MoveMarkerCommand(
+                idx, old_t, new_t, self._markers, self._canvas, self._detail, self._duration_s
+            )
+            self._undo_stack.push(cmd)
+
+        next_idx = idx + 1
+        self._stamp_cursor = next_idx
+        if next_idx < len(self._markers):
+            self._on_marker_selected(next_idx)

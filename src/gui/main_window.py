@@ -130,6 +130,12 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence(Qt.Key.Key_Space), self).activated.connect(
             self._on_space
         )
+        QShortcut(QKeySequence(Qt.Key.Key_Return), self).activated.connect(
+            self._on_stamp
+        )
+        QShortcut(QKeySequence(Qt.Key.Key_Enter), self).activated.connect(
+            self._on_stamp
+        )
 
     def _on_space(self) -> None:
         fw = QApplication.focusWidget()
@@ -139,6 +145,12 @@ class MainWindow(QMainWindow):
             self._audio_player.pause()
         else:
             self._audio_player.play()
+
+    def _on_stamp(self) -> None:
+        fw = QApplication.focusWidget()
+        if isinstance(fw, (QLineEdit, QTextEdit, QAbstractSpinBox)):
+            return
+        self._timeline.stamp_current()
 
     # ------------------------------------------------------------------
     # Dirty / title tracking
