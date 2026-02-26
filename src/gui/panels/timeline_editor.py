@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from PyQt6.QtCore import QEvent, QObject, QPoint, Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, QObject, QPoint, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QColor,
     QFont,
@@ -629,6 +629,11 @@ class TimelineEditorPanel(QGroupBox):
         self._undo_stack = QUndoStack(self)
         self._undo_stack.cleanChanged.connect(self._on_clean_changed)
 
+        self._follow_playhead = True
+        self._scroll_timer = QTimer(self)
+        self._scroll_timer.setInterval(16)
+        self._scroll_timer.timeout.connect(self._smooth_scroll_tick)
+
         self._build_ui()
         self._connect_player()
 
@@ -719,6 +724,12 @@ class TimelineEditorPanel(QGroupBox):
         self._snap_cb.toggled.connect(self._canvas.set_snap)
         row.addWidget(self._snap_cb)
 
+        self._follow_cb = QCheckBox("Follow playhead")
+        self._follow_cb.setChecked(True)
+        self._follow_cb.setToolTip("Auto-scroll to keep the playhead in view during playback")
+        self._follow_cb.toggled.connect(lambda checked: setattr(self, '_follow_playhead', checked))
+        row.addWidget(self._follow_cb)
+
         row.addStretch()
 
         self._insert_btn = QPushButton("+ Insert")
@@ -742,27 +753,36 @@ class TimelineEditorPanel(QGroupBox):
     def _connect_player(self) -> None:
         self._player.position_changed.connect(self._on_position_changed)
         self._player.duration_changed.connect(self._on_duration_changed)
+        self._player.playback_state_changed.connect(self._on_playback_state_changed)
 
     def _on_position_changed(self, ms: int) -> None:
-        t = ms / 1000.0
-        self._canvas.set_cursor(t)
-        if self._player.is_playing:
-            self._auto_scroll(t)
+        # During playback the timer drives cursor + scroll together in one frame.
+        # Only update cursor here when paused (e.g. user is seeking).
+        if not self._player.is_playing:
+            self._canvas.set_cursor(ms / 1000.0)
 
     def _on_duration_changed(self, ms: int) -> None:
         self._duration_s = ms / 1000.0
         self._canvas.load(self._markers, self._duration_s)
 
-    # ── auto-scroll ───────────────────────────────────────────────────────────
+    # ── follow-playhead scroll ────────────────────────────────────────────────
 
-    def _auto_scroll(self, time_s: float) -> None:
-        cursor_x  = int(time_s * self._px_per_sec())
-        sb        = self._scroll.horizontalScrollBar()
-        vp_w      = self._scroll.viewport().width()
-        left, right = sb.value(), sb.value() + vp_w
-        # Re-centre when cursor leaves the middle 50% of the viewport
-        if cursor_x < left + vp_w * 0.25 or cursor_x > right - vp_w * 0.25:
-            sb.setValue(max(0, cursor_x - vp_w // 2))
+    def _on_playback_state_changed(self, state) -> None:
+        from PyQt6.QtMultimedia import QMediaPlayer
+        if state == QMediaPlayer.PlaybackState.PlayingState:
+            self._scroll_timer.start()
+        else:
+            self._scroll_timer.stop()
+
+    def _smooth_scroll_tick(self) -> None:
+        """Single update point during playback: move cursor and scroll together."""
+        t        = self._player.position / 1000.0
+        cursor_x = int(t * self._px_per_sec())
+        self._canvas.set_cursor(t)
+        if self._follow_playhead:
+            sb   = self._scroll.horizontalScrollBar()
+            vp_w = self._scroll.viewport().width()
+            sb.setValue(max(0, cursor_x - int(vp_w * 0.30)))
 
     # ── zoom ──────────────────────────────────────────────────────────────────
 
