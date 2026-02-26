@@ -156,7 +156,7 @@ class ExportBar(QWidget):
         self._fps_combo = QComboBox()
         self._fps_combo.addItems(_FPS_OPTIONS)
         self._fps_combo.setCurrentText(_DEFAULT_FPS)
-        self._fps_combo.setFixedWidth(56)
+        self._fps_combo.setFixedWidth(72)
         row1.addWidget(self._fps_combo)
 
         res_label = QLabel("1920×1080")

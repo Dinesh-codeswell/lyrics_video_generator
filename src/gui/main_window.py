@@ -136,6 +136,23 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence(Qt.Key.Key_Enter), self).activated.connect(
             self._on_stamp
         )
+        QShortcut(QKeySequence(Qt.Key.Key_Left), self).activated.connect(
+            lambda: self._on_step(-1)
+        )
+        QShortcut(QKeySequence(Qt.Key.Key_Right), self).activated.connect(
+            lambda: self._on_step(1)
+        )
+
+    def _on_step(self, direction: int) -> None:
+        fw = QApplication.focusWidget()
+        if isinstance(fw, (QLineEdit, QTextEdit, QAbstractSpinBox)):
+            return
+        if self._audio_player.is_playing:
+            return
+        step_ms = 100  # 0.1s — matches snap grid
+        snapped = round(self._audio_player.position / step_ms) * step_ms
+        new_pos = max(0, snapped + direction * step_ms)
+        self._audio_player.seek(new_pos)
 
     def _on_space(self) -> None:
         fw = QApplication.focusWidget()

@@ -136,7 +136,7 @@ class _TimelineCanvas(QWidget):
     # ── coordinate helpers ────────────────────────────────────────────────────
 
     def _time_to_x(self, t: float) -> int:
-        return int(t * self._px_per_sec)
+        return round(t * self._px_per_sec)
 
     def _x_to_time(self, x: float) -> float:
         return x / self._px_per_sec
@@ -266,6 +266,23 @@ class _TimelineCanvas(QWidget):
         x = self._time_to_x(self._cursor_s)
         p.setPen(QPen(QColor("#ff4444"), 1))
         p.drawLine(x, 0, x, CANVAS_H)
+
+        # Time readout floating in the ruler next to the cursor
+        t = self._cursor_s
+        total_s = int(t)
+        tenths = int((t - total_s) * 10)
+        label = f"{total_s // 60}:{total_s % 60:02d}.{tenths}"
+        font = QFont()
+        font.setPointSize(8)
+        font.setBold(True)
+        p.setFont(font)
+        fm = QFontMetrics(font)
+        lw = fm.horizontalAdvance(label)
+        pad = 3
+        # Flip to left of cursor when too close to the right edge
+        lx = x + pad if x + pad + lw < self.width() else x - pad - lw
+        p.setPen(QColor("#ff4444"))
+        p.drawText(lx, RULER_H - 4, label)
 
     # ── adaptive tick granularity ─────────────────────────────────────────────
 

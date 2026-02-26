@@ -19,6 +19,14 @@ def _fmt_ms(ms: int) -> str:
     return f"{total_s // 60}:{total_s % 60:02d}"
 
 
+def _fmt_ms_precise(ms: int) -> str:
+    """Format milliseconds as M:SS.ss (hundredths precision)."""
+    ms = max(0, ms)
+    total_s = ms // 1000
+    hundredths = (ms % 1000) // 10
+    return f"{total_s // 60}:{total_s % 60:02d}.{hundredths:02d}"
+
+
 class TransportControls(QWidget):
     """Shared transport bar connected to an AudioPlayer instance."""
 
@@ -58,8 +66,8 @@ class TransportControls(QWidget):
         self._slider.sliderPressed.connect(self._on_slider_pressed)
         self._slider.sliderReleased.connect(self._on_slider_released)
 
-        self._time_label = QLabel("0:00 / 0:00")
-        self._time_label.setFixedWidth(90)
+        self._time_label = QLabel("0:00.00 / 0:00")
+        self._time_label.setFixedWidth(115)
         self._time_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
         layout.addWidget(self._play_btn)
@@ -79,7 +87,7 @@ class TransportControls(QWidget):
     def _on_position_changed(self, ms: int):
         if not self._seeking:
             self._slider.setValue(ms)
-        self._time_label.setText(f"{_fmt_ms(ms)} / {_fmt_ms(self._duration_ms)}")
+        self._time_label.setText(f"{_fmt_ms_precise(ms)} / {_fmt_ms(self._duration_ms)}")
 
     def _on_duration_changed(self, ms: int):
         self._duration_ms = ms
