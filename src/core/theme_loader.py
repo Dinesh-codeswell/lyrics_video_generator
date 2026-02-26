@@ -26,6 +26,7 @@ DEFAULTS = {
     "text_shadow": False,
     "text_shadow_color": "#000000",
     "text_shadow_offset": [3, 3],
+    "column_width": 1760,           # px; valid range 200–1920
 }
 
 
@@ -53,6 +54,7 @@ class Theme:
     text_shadow: bool = False
     text_shadow_color: str = "#000000"
     text_shadow_offset: list[int] = field(default_factory=lambda: [3, 3])
+    column_width: int = 1760
 
     @property
     def effective_active_text_color(self) -> str:
@@ -121,6 +123,10 @@ def _validate_theme(data: dict, filepath) -> None:
     if fs is not None and (not isinstance(fs, int) or fs <= 0):
         errors.append("'font_size': must be a positive integer")
 
+    cw = data.get("column_width")
+    if cw is not None and (not isinstance(cw, int) or not (200 <= cw <= 1920)):
+        errors.append("'column_width': must be an integer between 200 and 1920")
+
     if errors:
         label = f"theme '{filepath}'" if filepath else "theme"
         msg = f"Invalid {label}:\n" + "\n".join(f"  - {e}" for e in errors)
@@ -162,6 +168,7 @@ def load_theme(filepath: str | Path | None = None) -> Theme:
             text_shadow=DEFAULTS["text_shadow"],
             text_shadow_color=DEFAULTS["text_shadow_color"],
             text_shadow_offset=list(DEFAULTS["text_shadow_offset"]),
+            column_width=DEFAULTS["column_width"],
         )
 
     filepath = Path(filepath)
@@ -205,4 +212,5 @@ def load_theme(filepath: str | Path | None = None) -> Theme:
         text_shadow=merged["text_shadow"],
         text_shadow_color=merged["text_shadow_color"],
         text_shadow_offset=list(merged["text_shadow_offset"]),
+        column_width=int(merged["column_width"]),
     )

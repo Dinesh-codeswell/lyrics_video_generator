@@ -394,6 +394,23 @@ class ThemeEditorPanel(QGroupBox):
         self._highlight_combo.currentTextChanged.connect(self._on_highlight_changed)
         sec.add_row("Highlight", self._highlight_combo)
 
+        self._col_width_slider = QSlider(Qt.Orientation.Horizontal)
+        self._col_width_slider.setRange(200, 1920)
+        self._col_width_slider.setSingleStep(10)
+        self._col_width_slider.setPageStep(100)
+        self._col_width_spin = QSpinBox()
+        self._col_width_spin.setRange(200, 1920)
+        self._col_width_spin.setSingleStep(10)
+        self._col_width_spin.setFixedWidth(64)
+        self._col_width_spin.setSuffix("px")
+        self._col_width_slider.valueChanged.connect(
+            lambda v: self._sync_int(self._col_width_spin, v, self._on_col_width_changed)
+        )
+        self._col_width_spin.valueChanged.connect(
+            lambda v: self._sync_int(self._col_width_slider, v, self._on_col_width_changed)
+        )
+        sec.add_row("Col width", self._col_width_slider, self._col_width_spin)
+
         return sec
 
     # ──────────────────────────────────────────────────────────────────
@@ -445,6 +462,8 @@ class ThemeEditorPanel(QGroupBox):
             hl_idx = self._highlight_combo.findText(t.highlight_mode)
             if hl_idx >= 0:
                 self._highlight_combo.setCurrentIndex(hl_idx)
+            self._col_width_slider.setValue(t.column_width)
+            self._col_width_spin.setValue(t.column_width)
 
         finally:
             self._blocking = False
@@ -560,6 +579,11 @@ class ThemeEditorPanel(QGroupBox):
         if self._blocking:
             return
         self._theme.highlight_mode = value
+        self._set_theme_dirty(True)
+        self.theme_changed.emit(self._theme)
+
+    def _on_col_width_changed(self, value: int) -> None:
+        self._theme.column_width = int(value)
         self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 

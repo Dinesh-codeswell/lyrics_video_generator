@@ -297,12 +297,20 @@ class TextRenderer:
     def _get_horizontal_layout(self) -> tuple[int, str, str, int]:
         """Return (x, anchor, align, max_chars) based on theme lyric_position."""
         pos = self.theme.lyric_position
+        col_w = self.theme.column_width
+
+        try:
+            char_width = self.font.getlength("M")
+            max_chars = max(1, int(col_w / char_width)) if char_width > 0 else 40
+        except AttributeError:
+            max_chars = 40  # fallback for ImageFont.load_default()
+
         if pos == "left":
-            return COLUMN_PADDING, "lm", "left", 40
+            return COLUMN_PADDING, "lm", "left", max_chars
         elif pos == "right":
-            return WIDTH - COLUMN_PADDING, "rm", "right", 40
+            return WIDTH - COLUMN_PADDING, "rm", "right", max_chars
         else:  # center (default)
-            return WIDTH // 2, "mm", "center", 40
+            return WIDTH // 2, "mm", "center", max_chars
 
     def _wrap_text(self, text: str, max_chars: int = 40) -> str:
         """Wrap text to fit within the frame width."""
