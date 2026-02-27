@@ -34,15 +34,25 @@ class ScrollingAnimation:
     Virtual space: line i sits at y = i * line_height.  Each line holds
     at the center for most of its slot, then the view glides to the next
     line's center position, arriving exactly at that line's start_time.
+
+    If intro_lines and intro_end_time are supplied, the animation starts with
+    a static title card (last intro line centered, others above) that scrolls
+    smoothly upward into the lyric queue at intro_end_time.
     """
 
     def __init__(self, lines, fps: int, line_height: int = 120,
-                 inactive_alphas: list | None = None):
+                 inactive_alphas: list | None = None,
+                 intro_lines: list[str] | None = None,
+                 intro_end_time: float | None = None):
         self.lines = lines
         self.fps = fps
         self.line_height = line_height
         # Length controls how many lines are visible each side of center.
         self.inactive_alphas = inactive_alphas or [0.6, 0.4, 0.2]
+        self._max_visible_dist = len(self.inactive_alphas) + 1
+        # Title card intro support
+        self._intro_lines: list[str] = intro_lines or []
+        self._intro_end_time: float | None = intro_end_time
         self._transitions = self._compute_transitions()
 
     # ------------------------------------------------------------------
@@ -90,8 +100,22 @@ class ScrollingAnimation:
 
     def _compute_scroll_pos(self, t: float) -> float:
         """Virtual y coordinate that should be centered on screen at time t."""
-        # Pre-roll: before the first lyric, scroll lines 0 and 1 up from below.
-        if self.lines and t < self.lines[0].start_time:
+        if self._intro_lines and self._intro_end_time is not None:
+            # Title card phase: camera rests at a position that centers the
+            # last intro line (title).  Virtual position = -max_visible_dist * lh
+            # so that lyric lines are just beyond the alpha fade boundary.
+            static_pos = -self._max_visible_dist * self.line_height
+            intro_start_t = max(0.0, self._intro_end_time - INTRO_SCROLL_SECONDS)
+            if t <= intro_start_t:
+                return static_pos
+            if t < self._intro_end_time:
+                raw = (t - intro_start_t) / INTRO_SCROLL_SECONDS
+                eased = raw * raw * (3.0 - 2.0 * raw)
+                return static_pos * (1.0 - eased)   # static_pos → 0
+            # t >= intro_end_time: fall through to lyric transition/hold logic
+
+        elif self.lines and t < self.lines[0].start_time:
+            # Standard pre-roll (no title card): scroll lines 0 and 1 up from below.
             first_start = self.lines[0].start_time
             intro_start_t = max(0.0, first_start - INTRO_SCROLL_SECONDS)
             intro_start_pos = -2.0 * self.line_height  # lines 0+1 below center
@@ -142,9 +166,40 @@ class ScrollingAnimation:
         scroll_pos = self._compute_scroll_pos(t)
         active_idx = self._find_active_idx(t)
         center_y = HEIGHT / 2.0
-        max_dist = len(self.inactive_alphas) + 1
+        max_dist = self._max_visible_dist
 
         visible: list[LineRenderInfo] = []
+
+        # Intro lines: shown only before intro_end_time.
+        # Virtual positions place them just above the lyric space so they reach
+        # exactly alpha=0 by the time the transition completes (scroll_pos → 0).
+        if self._intro_lines and self._intro_end_time is not None and t < self._intro_end_time:
+            n_intro = len(self._intro_lines)
+            is_static = t < max(0.0, self._intro_end_time - INTRO_SCROLL_SECONDS)
+            for idx, text in enumerate(self._intro_lines):
+                # e.g. for [artist, title] with max_dist=4:
+                #   artist → virtual y = -(4+2-1-0)*lh = -5*lh
+                #   title  → virtual y = -(4+2-1-1)*lh = -4*lh  (= -max_dist*lh, centered when static)
+                virt_y = -(max_dist + n_intro - 1 - idx) * self.line_height
+                screen_y = virt_y - scroll_pos + center_y
+                dist_lines = abs(screen_y - center_y) / self.line_height
+                if dist_lines >= max_dist:
+                    continue
+                # Title (last intro line) is rendered as "active" during static phase
+                is_active = (idx == n_intro - 1) and is_static
+                visible.append(LineRenderInfo(
+                    text=text,
+                    screen_y=screen_y,
+                    alpha=self._screen_pos_to_alpha(screen_y),
+                    is_active=is_active,
+                ))
+
+            # During the fully static phase lyric lines are beyond max_dist anyway,
+            # but return early for clarity and to skip the loop.
+            if is_static:
+                return visible
+
+        # Lyric lines
         for i, line in enumerate(self.lines):
             screen_y = (i * self.line_height) - scroll_pos + center_y
             if screen_y < -self.line_height or screen_y > HEIGHT + self.line_height:

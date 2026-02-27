@@ -45,6 +45,7 @@ def parse_lyrics(filepath: str | Path) -> dict:
     return {
         "title": data["title"],
         "artist": data["artist"],
+        "intro_end_time": data.get("intro_end_time"),  # float | None
         "lines": lines,
     }
 

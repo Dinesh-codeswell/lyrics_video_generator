@@ -81,6 +81,7 @@ class _TimelineCanvas(QWidget):
     marker_drag_committed = pyqtSignal(int, float, float)  # index, old_t, new_t
     marker_selected       = pyqtSignal(int)                # index (-1 = deselected)
     seek_requested        = pyqtSignal(float)              # time_s
+    intro_marker_moved    = pyqtSignal(float)              # new_time_s (live during drag)
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -98,6 +99,8 @@ class _TimelineCanvas(QWidget):
         self._drag_offset_px: float = 0.0
         self._drag_start_time: float = 0.0  # time at start of drag (for undo)
         self._snap: bool = True
+        self._intro_end_t: float | None = None
+        self._dragging_intro: bool = False
 
         self._update_width()
 
@@ -126,6 +129,10 @@ class _TimelineCanvas(QWidget):
 
     def set_snap(self, enabled: bool) -> None:
         self._snap = enabled
+
+    def set_intro_marker(self, t: float | None) -> None:
+        self._intro_end_t = t
+        self.update()
 
     # ── sizing ────────────────────────────────────────────────────────────────
 
@@ -260,6 +267,27 @@ class _TimelineCanvas(QWidget):
             p.setPen(color)
             p.drawText(x + 5, RULER_H + fm.ascent() + 6, label)
 
+        # Intro end marker (gold dashed line + diamond handle)
+        if self._intro_end_t is not None:
+            ix = self._time_to_x(self._intro_end_t)
+            gold = QColor("#f0c040")
+            pen = QPen(gold, 2)
+            pen.setStyle(Qt.PenStyle.DashLine)
+            p.setPen(pen)
+            p.drawLine(ix, RULER_H, ix, CANVAS_H)
+            mid_y = RULER_H + TRACK_H // 2
+            d = 7
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(gold)
+            p.drawPolygon(QPolygon([
+                QPoint(ix,     mid_y - d),
+                QPoint(ix + d, mid_y),
+                QPoint(ix,     mid_y + d),
+                QPoint(ix - d, mid_y),
+            ]))
+            p.setPen(gold)
+            p.drawText(ix + 5, RULER_H + fm.ascent() + 6, "▶ lyrics")
+
     def _paint_cursor(self, p: QPainter) -> None:
         if self._duration_s <= 0:
             return
@@ -304,6 +332,11 @@ class _TimelineCanvas(QWidget):
         if event.button() != Qt.MouseButton.LeftButton:
             return
         x = event.position().x()
+        # Check intro marker first so it takes priority over nearby lyric markers
+        if self._intro_end_t is not None:
+            if abs(x - self._time_to_x(self._intro_end_t)) <= HIT_RADIUS:
+                self._dragging_intro = True
+                return
         hit = self._find_marker_at(x)
         if hit >= 0:
             self._dragging = hit
@@ -316,6 +349,15 @@ class _TimelineCanvas(QWidget):
             self.marker_selected.emit(-1)
 
     def mouseMoveEvent(self, event) -> None:  # noqa: N802
+        if self._dragging_intro:
+            x = event.position().x()
+            new_t = max(0.0, min(self._duration_s, self._x_to_time(x)))
+            if self._snap:
+                new_t = round(new_t / SNAP_STEP_S) * SNAP_STEP_S
+            self._intro_end_t = new_t
+            self.intro_marker_moved.emit(new_t)
+            self.update()
+            return
         if self._dragging < 0:
             return
         x = event.position().x() - self._drag_offset_px
@@ -337,6 +379,9 @@ class _TimelineCanvas(QWidget):
         self.update()
 
     def mouseReleaseEvent(self, event) -> None:  # noqa: N802
+        if self._dragging_intro:
+            self._dragging_intro = False
+            return
         if self._dragging >= 0:
             new_t = self._markers[self._dragging].start_time
             if abs(new_t - self._drag_start_time) > 1e-9:
@@ -640,6 +685,9 @@ class TimelineEditorPanel(QGroupBox):
         self._end_marker_t: float = 0.0   # original/saved end marker time
         self._lyrics_path: str | None = None
         self._dirty        = False
+        self._title:       str = ""
+        self._artist:      str = ""
+        self._intro_end_t: float | None = None
         self._zoom         = 1.0           # multiplier on BASE_PX_PER_SEC
         self._stamp_cursor = 0             # next marker index to stamp via Enter
 
@@ -675,14 +723,21 @@ class TimelineEditorPanel(QGroupBox):
             _Marker(start_time=line.start_time, text=line.text)
             for line in data["lines"]
         ]
+        self._title  = data.get("title") or ""
+        self._artist = data.get("artist") or ""
+        self._intro_end_t = data.get("intro_end_time")
         self._dirty = False
         self._stamp_cursor = 0
         self._undo_stack.clear()
 
+        self._title_edit.setText(self._title)
+        self._artist_edit.setText(self._artist)
         self._canvas.load(self._markers, self._duration_s)
+        self._canvas.set_intro_marker(self._intro_end_t)
+        self._clear_intro_btn.setEnabled(self._intro_end_t is not None)
         self._detail.load(-1, self._markers, self._duration_s)
         self._detail.set_dirty(False)
-        self.setTitle(f"Timeline Editor — {data['title']}")
+        self.setTitle(f"Timeline Editor — {self._title}")
 
     # ── UI construction ───────────────────────────────────────────────────────
 
@@ -697,8 +752,24 @@ class TimelineEditorPanel(QGroupBox):
         self._canvas.marker_drag_committed.connect(self._on_marker_drag_committed)
         self._canvas.marker_selected.connect(self._on_marker_selected)
         self._canvas.seek_requested.connect(self._on_seek_requested)
+        self._canvas.intro_marker_moved.connect(self._on_intro_marker_moved)
 
         layout.addLayout(self._build_toolbar())
+
+        # Song Info row (title + artist editable fields)
+        info_row = QHBoxLayout()
+        info_row.setSpacing(6)
+        info_row.addWidget(QLabel("Title:"))
+        self._title_edit = QLineEdit()
+        self._title_edit.setPlaceholderText("Song title")
+        self._title_edit.textEdited.connect(self._on_title_edited)
+        info_row.addWidget(self._title_edit, stretch=2)
+        info_row.addWidget(QLabel("Artist:"))
+        self._artist_edit = QLineEdit()
+        self._artist_edit.setPlaceholderText("Artist / band name")
+        self._artist_edit.textEdited.connect(self._on_artist_edited)
+        info_row.addWidget(self._artist_edit, stretch=2)
+        layout.addLayout(info_row)
 
         self._scroll = QScrollArea()
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
@@ -762,6 +833,19 @@ class TimelineEditorPanel(QGroupBox):
         self._delete_btn.setEnabled(False)
         self._delete_btn.clicked.connect(self._on_delete)
         row.addWidget(self._delete_btn)
+
+        self._set_intro_btn = QPushButton("Set Intro ▶")
+        self._set_intro_btn.setFixedWidth(90)
+        self._set_intro_btn.setToolTip("Place intro end marker at current playback position")
+        self._set_intro_btn.clicked.connect(self._on_set_intro)
+        row.addWidget(self._set_intro_btn)
+
+        self._clear_intro_btn = QPushButton("Clear Intro")
+        self._clear_intro_btn.setFixedWidth(85)
+        self._clear_intro_btn.setToolTip("Remove the intro end marker (disables title card)")
+        self._clear_intro_btn.setEnabled(False)
+        self._clear_intro_btn.clicked.connect(self._on_clear_intro)
+        row.addWidget(self._clear_intro_btn)
 
         return row
 
@@ -911,6 +995,39 @@ class TimelineEditorPanel(QGroupBox):
         if self._stamp_cursor > idx:
             self._stamp_cursor = max(0, self._stamp_cursor - 1)
 
+    # ── intro marker + song info handlers ────────────────────────────────────
+
+    def _on_title_edited(self, text: str) -> None:
+        self._title = text
+        self._set_extras_dirty()
+
+    def _on_artist_edited(self, text: str) -> None:
+        self._artist = text
+        self._set_extras_dirty()
+
+    def _on_set_intro(self) -> None:
+        t = self._canvas._cursor_s
+        self._intro_end_t = t
+        self._canvas.set_intro_marker(t)
+        self._clear_intro_btn.setEnabled(True)
+        self._set_extras_dirty()
+
+    def _on_clear_intro(self) -> None:
+        self._intro_end_t = None
+        self._canvas.set_intro_marker(None)
+        self._clear_intro_btn.setEnabled(False)
+        self._set_extras_dirty()
+
+    def _on_intro_marker_moved(self, t: float) -> None:
+        self._intro_end_t = t
+        self._set_extras_dirty()
+
+    def _set_extras_dirty(self) -> None:
+        """Mark dirty for changes that bypass the undo stack (title/artist/intro)."""
+        self._dirty = True
+        self._detail.set_dirty(True)
+        self.lyrics_modified.emit()
+
     # ── save ──────────────────────────────────────────────────────────────────
 
     def _on_save(self) -> None:
@@ -922,11 +1039,22 @@ class TimelineEditorPanel(QGroupBox):
             QMessageBox.critical(self, "Save Error", str(exc))
             return
         self._undo_stack.setClean()   # triggers _on_clean_changed(True)
+        # Also clear dirty explicitly — title/artist/intro bypass the undo stack,
+        # so if the stack was already clean, cleanChanged won't fire again.
+        self._dirty = False
+        self._detail.set_dirty(False)
 
     def _write_lyrics(self, path: str) -> None:
         filepath = Path(path)
         with open(filepath, "r", encoding="utf-8") as f:
             data = json.load(f)
+
+        data["title"] = self._title
+        data["artist"] = self._artist
+        if self._intro_end_t is not None:
+            data["intro_end_time"] = round(self._intro_end_t, 3)
+        else:
+            data.pop("intro_end_time", None)
 
         raw_lyrics = [
             {"time": round(m.start_time, 3), "text": m.text}

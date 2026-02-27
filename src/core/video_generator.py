@@ -107,6 +107,7 @@ def generate_video(
     renderer = TextRenderer(theme_obj)
 
     lines = lyrics_data["lines"]
+    intro_end_time = lyrics_data.get("intro_end_time")
     total_duration = audio.duration
     if preview:
         total_duration = max(min(audio.duration - preview_start, 30.0), 0.0)
@@ -129,6 +130,11 @@ def generate_video(
         fps=fps,
         line_height=theme_obj.line_height,
         inactive_alphas=theme_obj.inactive_text_opacity_gradient,
+        intro_lines=(
+            [lyrics_data["artist"], lyrics_data["title"]]
+            if intro_end_time is not None else None
+        ),
+        intro_end_time=intro_end_time,
     )
 
     total_frames = max(int(total_duration * fps), 1)
