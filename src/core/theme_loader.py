@@ -27,6 +27,9 @@ DEFAULTS = {
     "text_shadow_color": "#000000",
     "text_shadow_offset": [3, 3],
     "column_width": 1760,           # px; valid range 200–1920
+    "logo_path": "",                # abs or relative path to PNG/JPG; empty = no logo
+    "logo_width": 400,              # px wide; height auto-scaled to maintain aspect ratio
+    "logo_h_align": "center",       # "left", "center", "right"
 }
 
 
@@ -55,6 +58,9 @@ class Theme:
     text_shadow_color: str = "#000000"
     text_shadow_offset: list[int] = field(default_factory=lambda: [3, 3])
     column_width: int = 1760
+    logo_path: str = ""
+    logo_width: int = 400
+    logo_h_align: str = "center"
 
     @property
     def effective_active_text_color(self) -> str:
@@ -127,6 +133,13 @@ def _validate_theme(data: dict, filepath) -> None:
     if cw is not None and (not isinstance(cw, int) or not (200 <= cw <= 1920)):
         errors.append("'column_width': must be an integer between 200 and 1920")
 
+    lw = data.get("logo_width")
+    if lw is not None and (not isinstance(lw, int) or not (50 <= lw <= 1920)):
+        errors.append("'logo_width': must be an integer between 50 and 1920")
+
+    if "logo_h_align" in data and data["logo_h_align"] not in ("left", "center", "right"):
+        errors.append("'logo_h_align': must be 'left', 'center', or 'right'")
+
     if errors:
         label = f"theme '{filepath}'" if filepath else "theme"
         msg = f"Invalid {label}:\n" + "\n".join(f"  - {e}" for e in errors)
@@ -169,6 +182,9 @@ def load_theme(filepath: str | Path | None = None) -> Theme:
             text_shadow_color=DEFAULTS["text_shadow_color"],
             text_shadow_offset=list(DEFAULTS["text_shadow_offset"]),
             column_width=DEFAULTS["column_width"],
+            logo_path=DEFAULTS["logo_path"],
+            logo_width=DEFAULTS["logo_width"],
+            logo_h_align=DEFAULTS["logo_h_align"],
         )
 
     filepath = Path(filepath)
@@ -213,4 +229,7 @@ def load_theme(filepath: str | Path | None = None) -> Theme:
         text_shadow_color=merged["text_shadow_color"],
         text_shadow_offset=list(merged["text_shadow_offset"]),
         column_width=int(merged["column_width"]),
+        logo_path=str(merged.get("logo_path", "")),
+        logo_width=int(merged.get("logo_width", 400)),
+        logo_h_align=str(merged.get("logo_h_align", "center")),
     )

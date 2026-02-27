@@ -1,0 +1,30 @@
+{
+  "name": "Default",
+  "background_color": "#1a1a1a",
+  "text_color": "#ffffff",
+  "active_text_color": null,
+  "active_text_bold": false,
+  "active_text_glow": true,
+  "active_glow_color": null,
+  "inactive_text_opacity_gradient": [
+    0.6,
+    0.4,
+    0.2
+  ],
+  "font_family": "Arial",
+  "font_size": 72,
+  "line_spacing": 1.5,
+  "lyric_position": "center",
+  "highlight_mode": "line",
+  "highlight_dim_alpha": 0.3,
+  "text_overlay_opacity": 0,
+  "text_overlay_color": "#000000",
+  "text_position": "center",
+  "text_shadow": false,
+  "text_shadow_color": "#000000",
+  "text_shadow_offset": [
+    3,
+    3
+  ],
+  "column_width": 900
+}

@@ -731,7 +731,6 @@ class TimelineEditorPanel(QGroupBox):
         self._undo_stack.clear()
 
         self._title_edit.setText(self._title)
-        self._artist_edit.setText(self._artist)
         self._canvas.load(self._markers, self._duration_s)
         self._canvas.set_intro_marker(self._intro_end_t)
         self._clear_intro_btn.setEnabled(self._intro_end_t is not None)
@@ -764,11 +763,6 @@ class TimelineEditorPanel(QGroupBox):
         self._title_edit.setPlaceholderText("Song title")
         self._title_edit.textEdited.connect(self._on_title_edited)
         info_row.addWidget(self._title_edit, stretch=2)
-        info_row.addWidget(QLabel("Artist:"))
-        self._artist_edit = QLineEdit()
-        self._artist_edit.setPlaceholderText("Artist / band name")
-        self._artist_edit.textEdited.connect(self._on_artist_edited)
-        info_row.addWidget(self._artist_edit, stretch=2)
         layout.addLayout(info_row)
 
         self._scroll = QScrollArea()
@@ -1001,9 +995,6 @@ class TimelineEditorPanel(QGroupBox):
         self._title = text
         self._set_extras_dirty()
 
-    def _on_artist_edited(self, text: str) -> None:
-        self._artist = text
-        self._set_extras_dirty()
 
     def _on_set_intro(self) -> None:
         t = self._canvas._cursor_s
@@ -1050,7 +1041,6 @@ class TimelineEditorPanel(QGroupBox):
             data = json.load(f)
 
         data["title"] = self._title
-        data["artist"] = self._artist
         if self._intro_end_t is not None:
             data["intro_end_time"] = round(self._intro_end_t, 3)
         else:

@@ -242,6 +242,7 @@ class ThemeEditorPanel(QGroupBox):
         content_layout.addWidget(self._build_active_section())
         content_layout.addWidget(self._build_inactive_section())
         content_layout.addWidget(self._build_layout_section())
+        content_layout.addWidget(self._build_logo_section())
         content_layout.addStretch()
 
         scroll.setWidget(content)
@@ -413,6 +414,53 @@ class ThemeEditorPanel(QGroupBox):
 
         return sec
 
+    def _build_logo_section(self) -> _CollapsibleSection:
+        sec = _CollapsibleSection("Intro Logo")
+
+        # File picker row — wrap in a container widget so add_row accepts it
+        self._logo_path_label = QLabel("(none)")
+        self._logo_path_label.setWordWrap(False)
+        self._logo_browse_btn = QPushButton("Browse…")
+        self._logo_browse_btn.setFixedWidth(64)
+        self._logo_browse_btn.clicked.connect(self._on_logo_browse)
+        self._logo_clear_btn = QPushButton("Clear")
+        self._logo_clear_btn.setFixedWidth(44)
+        self._logo_clear_btn.clicked.connect(self._on_logo_clear)
+        path_widget = QWidget()
+        path_layout = QHBoxLayout(path_widget)
+        path_layout.setContentsMargins(0, 0, 0, 0)
+        path_layout.setSpacing(4)
+        path_layout.addWidget(self._logo_path_label, stretch=1)
+        path_layout.addWidget(self._logo_browse_btn)
+        path_layout.addWidget(self._logo_clear_btn)
+        sec.add_row("File", path_widget)
+
+        # Width slider + spinbox
+        self._logo_width_slider = QSlider(Qt.Orientation.Horizontal)
+        self._logo_width_slider.setRange(50, 1920)
+        self._logo_width_slider.setSingleStep(10)
+        self._logo_width_slider.setPageStep(50)
+        self._logo_width_spin = QSpinBox()
+        self._logo_width_spin.setRange(50, 1920)
+        self._logo_width_spin.setSingleStep(10)
+        self._logo_width_spin.setFixedWidth(64)
+        self._logo_width_spin.setSuffix("px")
+        self._logo_width_slider.valueChanged.connect(
+            lambda v: self._sync_int(self._logo_width_spin, v, self._on_logo_width_changed)
+        )
+        self._logo_width_spin.valueChanged.connect(
+            lambda v: self._sync_int(self._logo_width_slider, v, self._on_logo_width_changed)
+        )
+        sec.add_row("Width", self._logo_width_slider, self._logo_width_spin)
+
+        # Alignment combo
+        self._logo_align_combo = QComboBox()
+        self._logo_align_combo.addItems(["left", "center", "right"])
+        self._logo_align_combo.currentTextChanged.connect(self._on_logo_align_changed)
+        sec.add_row("Align", self._logo_align_combo)
+
+        return sec
+
     # ──────────────────────────────────────────────────────────────────
     # Populate controls from self._theme
     # ──────────────────────────────────────────────────────────────────
@@ -464,6 +512,15 @@ class ThemeEditorPanel(QGroupBox):
                 self._highlight_combo.setCurrentIndex(hl_idx)
             self._col_width_slider.setValue(t.column_width)
             self._col_width_spin.setValue(t.column_width)
+
+            # Intro Logo
+            p = t.logo_path
+            self._logo_path_label.setText(Path(p).name if p else "(none)")
+            self._logo_width_slider.setValue(t.logo_width)
+            self._logo_width_spin.setValue(t.logo_width)
+            idx = self._logo_align_combo.findText(t.logo_h_align)
+            if idx >= 0:
+                self._logo_align_combo.setCurrentIndex(idx)
 
         finally:
             self._blocking = False
@@ -584,6 +641,34 @@ class ThemeEditorPanel(QGroupBox):
 
     def _on_col_width_changed(self, value: int) -> None:
         self._theme.column_width = int(value)
+        self._set_theme_dirty(True)
+        self.theme_changed.emit(self._theme)
+
+    def _on_logo_browse(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Select Logo Image", "", "Images (*.png *.jpg *.jpeg *.webp)"
+        )
+        if path:
+            self._theme.logo_path = path
+            self._logo_path_label.setText(Path(path).name)
+            self._set_theme_dirty(True)
+            self.theme_changed.emit(self._theme)
+
+    def _on_logo_clear(self) -> None:
+        self._theme.logo_path = ""
+        self._logo_path_label.setText("(none)")
+        self._set_theme_dirty(True)
+        self.theme_changed.emit(self._theme)
+
+    def _on_logo_width_changed(self, value: int) -> None:
+        self._theme.logo_width = int(value)
+        self._set_theme_dirty(True)
+        self.theme_changed.emit(self._theme)
+
+    def _on_logo_align_changed(self, value: str) -> None:
+        if self._blocking:
+            return
+        self._theme.logo_h_align = value
         self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 

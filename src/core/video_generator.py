@@ -131,7 +131,10 @@ def generate_video(
         line_height=theme_obj.line_height,
         inactive_alphas=theme_obj.inactive_text_opacity_gradient,
         intro_lines=(
-            [lyrics_data["artist"], lyrics_data["title"]]
+            [
+                "__LOGO__" if theme_obj.logo_path else lyrics_data.get("artist", ""),
+                lyrics_data["title"],
+            ]
             if intro_end_time is not None else None
         ),
         intro_end_time=intro_end_time,
