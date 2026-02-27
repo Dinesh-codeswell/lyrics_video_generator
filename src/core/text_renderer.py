@@ -19,6 +19,7 @@ class TextRenderer:
         self.theme = theme
         self.font = self._load_font()
         self.bold_font = self._load_bold_font()
+        self.active_font = self._load_active_font()
         self._logo: Image.Image | None = self._load_logo()
 
     def _load_font(self) -> ImageFont.FreeTypeFont:
@@ -51,10 +52,34 @@ class TextRenderer:
         except OSError:
             return self.font
 
+    def _load_active_font(self) -> ImageFont.FreeTypeFont:
+        """Load the active-line font family, falling back to global font.
+
+        If active_font_family is None, returns the already-loaded bold_font
+        (which respects active_text_bold using the global font_family).
+        If a separate active_font_family is specified, loads it and applies
+        bold if active_text_bold is True.
+        """
+        family = self.theme.active_font_family
+        if not family:
+            return self.bold_font  # inherit global font (+ bold logic)
+        try:
+            base = ImageFont.truetype(family, self.theme.font_size)
+        except OSError:
+            return self.bold_font
+        if not self.theme.active_text_bold:
+            return base
+        if "bold" in family.lower():
+            return base
+        try:
+            return ImageFont.truetype(family + " Bold", self.theme.font_size)
+        except OSError:
+            return base
+
     def _get_font(self, is_active: bool = False) -> ImageFont.FreeTypeFont:
         """Return the appropriate font for the given line."""
         if is_active:
-            return self.bold_font
+            return self.active_font
         return self.font
 
     def _load_logo(self) -> "Image.Image | None":
@@ -211,10 +236,19 @@ class TextRenderer:
                     fill=shadow_color, anchor=anchor, align=align,
                 )
 
+            # Stroke/outline params for active line
+            stroke_width = self.theme.active_text_stroke_width if is_active else 0
+            stroke_fill = (
+                self._hex_to_rgba(self.theme.active_text_stroke_color, a)
+                if is_active and stroke_width > 0
+                else None
+            )
+
             # Main text — use token-level highlighting for active line in word/char mode
             if is_active and highlight_mode in ("word", "character"):
                 self._render_highlighted_tokens(
                     draw, wrapped, y, alpha, highlight_progress, highlight_mode, font,
+                    stroke_width=stroke_width, stroke_fill=stroke_fill,
                 )
             else:
                 color = self.theme.effective_active_text_color if is_active else self.theme.text_color
@@ -222,6 +256,7 @@ class TextRenderer:
                 draw.multiline_text(
                     (x, y), wrapped, font=font,
                     fill=text_color, anchor=anchor, align=align,
+                    stroke_width=stroke_width, stroke_fill=stroke_fill,
                 )
 
             img = Image.alpha_composite(img, txt_layer)
@@ -237,6 +272,8 @@ class TextRenderer:
         progress: float,
         mode: str,
         font: ImageFont.FreeTypeFont | None = None,
+        stroke_width: int = 0,
+        stroke_fill: tuple | None = None,
     ) -> None:
         """Render text with progressive word- or character-level highlighting.
 
@@ -326,6 +363,8 @@ class TextRenderer:
                     font=font,
                     fill=color,
                     anchor="lm",
+                    stroke_width=stroke_width,
+                    stroke_fill=stroke_fill,
                 )
                 try:
                     token_width = font.getlength(token_str)

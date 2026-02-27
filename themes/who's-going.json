@@ -2,8 +2,8 @@
   "name": "Default",
   "background_color": "#1a1a1a",
   "text_color": "#ffffff",
-  "active_text_color": "#FFFB00",
-  "active_text_bold": true,
+  "active_text_color": "#D66E31",
+  "active_text_bold": false,
   "active_text_glow": true,
   "active_glow_color": null,
   "inactive_text_opacity_gradient": [
@@ -12,9 +12,12 @@
     0.2
   ],
   "font_family": "Arial",
-  "font_size": 74,
+  "font_size": 72,
   "line_spacing": 1.5,
   "lyric_position": "center",
+  "active_font_family": null,
+  "active_text_stroke_color": "#6A1E22",
+  "active_text_stroke_width": 3,
   "highlight_mode": "line",
   "highlight_dim_alpha": 0.3,
   "text_overlay_opacity": 0,
@@ -26,7 +29,7 @@
     3,
     3
   ],
-  "column_width": 1820,
+  "column_width": 1760,
   "logo_path": "/Users/curtiswilliams/Library/Mobile Documents/com~apple~CloudDocs/the Durt Nurs' Den of Inequity/Web_Master/Logo_Design/Version 3.0/logo-512-white.png",
   "logo_width": 400,
   "logo_h_align": "center"

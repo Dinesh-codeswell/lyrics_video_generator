@@ -330,7 +330,7 @@ class ThemeEditorPanel(QGroupBox):
 
         self._active_color_btn = _ColorButton()
         self._active_color_btn.color_changed.connect(self._on_active_color_changed)
-        sec.add_row("Color", self._active_color_btn)
+        sec.add_row("Fill clr", self._active_color_btn)
 
         self._active_bold_chk = QCheckBox("Bold")
         self._active_bold_chk.toggled.connect(self._on_active_bold_changed)
@@ -343,6 +343,29 @@ class ThemeEditorPanel(QGroupBox):
         self._glow_color_btn = _ColorButton()
         self._glow_color_btn.color_changed.connect(self._on_glow_color_changed)
         sec.add_row("Glow clr", self._glow_color_btn)
+
+        # Stroke/outline
+        self._active_stroke_color_btn = _ColorButton()
+        self._active_stroke_color_btn.color_changed.connect(self._on_active_stroke_color_changed)
+        sec.add_row("Outline clr", self._active_stroke_color_btn)
+
+        self._active_stroke_width_spin = QSpinBox()
+        self._active_stroke_width_spin.setRange(0, 40)
+        self._active_stroke_width_spin.setFixedWidth(52)
+        self._active_stroke_width_spin.setSuffix("px")
+        self._active_stroke_width_spin.valueChanged.connect(self._on_active_stroke_width_changed)
+        sec.add_row("Outline px", self._active_stroke_width_spin)
+
+        # Per-active-line font override
+        self._active_font_combo = QComboBox()
+        self._active_font_combo.setMaxVisibleItems(12)
+        self._active_font_combo.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        self._active_font_combo.addItem("— inherit —")
+        self._active_font_combo.addItems(sorted(QFontDatabase.families()))
+        self._active_font_combo.currentTextChanged.connect(self._on_active_font_changed)
+        sec.add_row("Font", self._active_font_combo)
 
         return sec
 
@@ -495,6 +518,13 @@ class ThemeEditorPanel(QGroupBox):
             glow_color = t.active_glow_color or active_color
             self._glow_color_btn.set_color(glow_color)
             self._glow_color_btn.setEnabled(t.active_text_glow)
+            self._active_stroke_color_btn.set_color(t.active_text_stroke_color)
+            self._active_stroke_width_spin.setValue(t.active_text_stroke_width)
+            if t.active_font_family:
+                idx = self._active_font_combo.findText(t.active_font_family)
+                self._active_font_combo.setCurrentIndex(idx if idx >= 0 else 0)
+            else:
+                self._active_font_combo.setCurrentIndex(0)  # "— inherit —"
 
             # Inactive lines
             grad = t.inactive_text_opacity_gradient
@@ -614,6 +644,25 @@ class ThemeEditorPanel(QGroupBox):
 
     def _on_glow_color_changed(self, hex_str: str) -> None:
         self._theme.active_glow_color = hex_str
+        self._set_theme_dirty(True)
+        self.theme_changed.emit(self._theme)
+
+    def _on_active_stroke_color_changed(self, hex_str: str) -> None:
+        self._theme.active_text_stroke_color = hex_str
+        self._set_theme_dirty(True)
+        self.theme_changed.emit(self._theme)
+
+    def _on_active_stroke_width_changed(self, value: int) -> None:
+        if self._blocking:
+            return
+        self._theme.active_text_stroke_width = int(value)
+        self._set_theme_dirty(True)
+        self.theme_changed.emit(self._theme)
+
+    def _on_active_font_changed(self, text: str) -> None:
+        if self._blocking:
+            return
+        self._theme.active_font_family = None if text == "— inherit —" else text
         self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 

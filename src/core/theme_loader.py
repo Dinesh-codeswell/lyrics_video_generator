@@ -8,10 +8,13 @@ DEFAULTS = {
     "name": "Default",
     "background_color": "#1a1a1a",
     "text_color": "#ffffff",
-    "active_text_color": None,                      # None = same as text_color
+    "active_text_color": "#D66E31",                 # burnt orange fill
     "active_text_bold": False,
     "active_text_glow": True,
     "active_glow_color": None,                      # None = same as active_text_color
+    "active_font_family": None,                     # None = inherit from font_family
+    "active_text_stroke_color": "#6A1E22",          # dark maroon rib/outline
+    "active_text_stroke_width": 3,                  # px; 0 = no stroke
     "inactive_text_opacity_gradient": [0.6, 0.4, 0.2],
     "font_family": "Arial",
     "font_size": 72,
@@ -48,6 +51,9 @@ class Theme:
     font_size: int
     line_spacing: float
     lyric_position: str = "center"
+    active_font_family: str | None = None
+    active_text_stroke_color: str = "#6A1E22"
+    active_text_stroke_width: int = 3
     highlight_mode: str = "line"
     highlight_dim_alpha: float = 0.3
     text_overlay_opacity: int = 0
@@ -101,10 +107,14 @@ def _validate_theme(data: dict, filepath) -> None:
         if val is not None and not _is_valid_hex_color(val):
             errors.append(f"'{key}': '{val}' is not a valid hex color (expected #RRGGBB)")
 
-    for key in ("active_text_color", "active_glow_color"):
+    for key in ("active_text_color", "active_glow_color", "active_text_stroke_color"):
         val = data.get(key)
         if val is not None and not _is_valid_hex_color(val):
             errors.append(f"'{key}': '{val}' is not a valid hex color (expected #RRGGBB)")
+
+    sw = data.get("active_text_stroke_width")
+    if sw is not None and (not isinstance(sw, int) or not (0 <= sw <= 40)):
+        errors.append("'active_text_stroke_width': must be an integer between 0 and 40")
 
     if "lyric_position" in data and data["lyric_position"] not in ("left", "center", "right"):
         errors.append("'lyric_position': must be 'left', 'center', or 'right'")
@@ -168,6 +178,9 @@ def load_theme(filepath: str | Path | None = None) -> Theme:
             active_text_bold=DEFAULTS["active_text_bold"],
             active_text_glow=DEFAULTS["active_text_glow"],
             active_glow_color=DEFAULTS["active_glow_color"],
+            active_font_family=DEFAULTS["active_font_family"],
+            active_text_stroke_color=DEFAULTS["active_text_stroke_color"],
+            active_text_stroke_width=DEFAULTS["active_text_stroke_width"],
             inactive_text_opacity_gradient=list(DEFAULTS["inactive_text_opacity_gradient"]),
             font_family=DEFAULTS["font_family"],
             font_size=DEFAULTS["font_size"],
@@ -215,6 +228,9 @@ def load_theme(filepath: str | Path | None = None) -> Theme:
         active_text_bold=merged["active_text_bold"],
         active_text_glow=merged["active_text_glow"],
         active_glow_color=merged["active_glow_color"],
+        active_font_family=merged.get("active_font_family"),
+        active_text_stroke_color=str(merged.get("active_text_stroke_color", DEFAULTS["active_text_stroke_color"])),
+        active_text_stroke_width=int(merged.get("active_text_stroke_width", DEFAULTS["active_text_stroke_width"])),
         inactive_text_opacity_gradient=list(merged["inactive_text_opacity_gradient"]),
         font_family=merged["font_family"],
         font_size=merged["font_size"],
