@@ -157,6 +157,7 @@ class ThemeEditorPanel(QGroupBox):
             QMessageBox.critical(self, "Load Error", str(exc))
             return
         self._populate_controls()
+        self.theme_changed.emit(self._theme)
 
     def save_theme(self, path: str | None = None) -> None:
         """Write the current in-memory theme to disk.
