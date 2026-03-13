@@ -188,6 +188,19 @@ class ThemeEditorPanel(QGroupBox):
     def is_dirty(self) -> bool:
         return self._dirty
 
+    def _refresh_name_label(self, name: str) -> None:
+        self._name_label.setText(name)
+        if name == DEFAULTS["name"]:
+            self._name_label.setStyleSheet(
+                "font-style: italic; color: #888; padding: 1px 4px;"
+            )
+        else:
+            self._name_label.setStyleSheet(
+                "font-weight: bold; color: #e8c84a;"
+                " background: #2a2418; border: 1px solid #6a5420;"
+                " border-radius: 4px; padding: 1px 6px;"
+            )
+
     def _set_theme_dirty(self, dirty: bool) -> None:
         if dirty != self._dirty:
             self._dirty = dirty
@@ -206,8 +219,8 @@ class ThemeEditorPanel(QGroupBox):
         top = QHBoxLayout()
         top.setSpacing(4)
 
-        self._name_label = QLabel("Default")
-        self._name_label.setStyleSheet("font-style: italic; color: gray;")
+        self._name_label = QLabel()
+        self._name_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         top.addWidget(self._name_label)
         top.addStretch()
 
@@ -493,7 +506,7 @@ class ThemeEditorPanel(QGroupBox):
         self._blocking = True
         t = self._theme
         try:
-            self._name_label.setText(t.name)
+            self._refresh_name_label(t.name)
 
             # Background
             self._bg_color_btn.set_color(t.background_color)
