@@ -108,6 +108,7 @@ def generate_video(
 
     lines = lyrics_data["lines"]
     intro_end_time = lyrics_data.get("intro_end_time")
+    outro_start_time = lyrics_data.get("outro_start_time")
     total_duration = audio.duration
     if preview:
         total_duration = max(min(audio.duration - preview_start, 30.0), 0.0)
@@ -138,6 +139,14 @@ def generate_video(
             if intro_end_time is not None else None
         ),
         intro_end_time=intro_end_time,
+        outro_lines=(
+            [
+                "__LOGO__" if theme_obj.logo_path else lyrics_data.get("artist", ""),
+                lyrics_data["title"],
+            ]
+            if outro_start_time is not None else None
+        ),
+        outro_start_time=outro_start_time,
     )
 
     total_frames = max(int(total_duration * fps), 1)

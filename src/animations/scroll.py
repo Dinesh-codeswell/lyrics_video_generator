@@ -38,12 +38,18 @@ class ScrollingAnimation:
     If intro_lines and intro_end_time are supplied, the animation starts with
     a static title card (last intro line centered, others above) that scrolls
     smoothly upward into the lyric queue at intro_end_time.
+
+    If outro_lines and outro_start_time are supplied, the animation ends with
+    a smooth scroll into a static title card (mirroring the intro) that holds
+    for the remainder of the video.
     """
 
     def __init__(self, lines, fps: int, line_height: int = 120,
                  inactive_alphas: list | None = None,
                  intro_lines: list[str] | None = None,
-                 intro_end_time: float | None = None):
+                 intro_end_time: float | None = None,
+                 outro_lines: list[str] | None = None,
+                 outro_start_time: float | None = None):
         self.lines = lines
         self.fps = fps
         self.line_height = line_height
@@ -53,6 +59,9 @@ class ScrollingAnimation:
         # Title card intro support
         self._intro_lines: list[str] = intro_lines or []
         self._intro_end_time: float | None = intro_end_time
+        # Title card outro support
+        self._outro_lines: list[str] = outro_lines or []
+        self._outro_start_time: float | None = outro_start_time
         self._transitions = self._compute_transitions()
 
     # ------------------------------------------------------------------
@@ -98,6 +107,27 @@ class ScrollingAnimation:
                 return i
         return last_idx
 
+    def _compute_lyric_scroll_pos(self, t: float) -> float:
+        """Normal lyric transition/hold logic (no intro/outro)."""
+        for t_start, t_end, from_idx, to_idx in self._transitions:
+            if t_start <= t <= t_end:
+                if t_end == t_start:
+                    return to_idx * self.line_height
+                raw = (t - t_start) / (t_end - t_start)
+                eased = raw * raw * (3.0 - 2.0 * raw)
+                return from_idx * self.line_height + eased * self.line_height
+
+        # No active transition — rest at the most recently reached position.
+        for t_start, t_end, from_idx, to_idx in reversed(self._transitions):
+            if t >= t_end:
+                return to_idx * self.line_height
+
+        # Before any transition has started (early in the song).
+        active_idx = self._find_active_idx(t)
+        if active_idx < 0:
+            return 0.0
+        return active_idx * self.line_height
+
     def _compute_scroll_pos(self, t: float) -> float:
         """Virtual y coordinate that should be centered on screen at time t."""
         if self._intro_lines and self._intro_end_time is not None:
@@ -112,7 +142,7 @@ class ScrollingAnimation:
                 raw = (t - intro_start_t) / INTRO_SCROLL_SECONDS
                 eased = raw * raw * (3.0 - 2.0 * raw)
                 return static_pos * (1.0 - eased)   # static_pos → 0
-            # t >= intro_end_time: fall through to lyric transition/hold logic
+            # t >= intro_end_time: fall through to outro/lyric logic
 
         elif self.lines and t < self.lines[0].start_time:
             # Standard pre-roll (no title card): scroll lines 0 and 1 up from below.
@@ -125,29 +155,18 @@ class ScrollingAnimation:
             eased = raw * raw * (3.0 - 2.0 * raw)
             return intro_start_pos * (1.0 - eased)  # approaches 0.0 (line 0 at center)
 
-        for t_start, t_end, from_idx, to_idx in self._transitions:
-            if t_start <= t <= t_end:
-                if t_end == t_start:
-                    return to_idx * self.line_height
-                raw = (t - t_start) / (t_end - t_start)
-                # Smooth ease-in-out (smoothstep)
-                eased = raw * raw * (3.0 - 2.0 * raw)
-                return from_idx * self.line_height + eased * self.line_height
+        # Outro phase: transition to static card below the lyric space.
+        if self._outro_lines and self._outro_start_time is not None and t >= self._outro_start_time:
+            outro_static_pos = (len(self.lines) - 1 + self._max_visible_dist) * self.line_height
+            outro_end_t = self._outro_start_time + INTRO_SCROLL_SECONDS
+            if t >= outro_end_t:
+                return outro_static_pos
+            from_pos = self._compute_lyric_scroll_pos(self._outro_start_time)
+            raw = (t - self._outro_start_time) / INTRO_SCROLL_SECONDS
+            eased = raw * raw * (3.0 - 2.0 * raw)
+            return from_pos + eased * (outro_static_pos - from_pos)
 
-        # No active transition — rest at the most recently reached position.
-        # For long-gap transitions that have completed, active_idx still points
-        # to the FROM line (not yet sung TO line), so using it would snap the
-        # view back to the wrong position. Instead, use the last transition's
-        # to_idx so the view holds at the next line's center until it goes active.
-        for t_start, t_end, from_idx, to_idx in reversed(self._transitions):
-            if t >= t_end:
-                return to_idx * self.line_height
-
-        # Before any transition has started (early in the song).
-        active_idx = self._find_active_idx(t)
-        if active_idx < 0:
-            return 0.0
-        return active_idx * self.line_height
+        return self._compute_lyric_scroll_pos(t)
 
     def _screen_pos_to_alpha(self, screen_y: float) -> float:
         """Continuous opacity: 1.0 at center, cosine taper to 0.0 at max visible distance.
@@ -198,6 +217,32 @@ class ScrollingAnimation:
             # but return early for clarity and to skip the loop.
             if is_static:
                 return visible
+
+        # Outro lines: shown from outro_start_time onward.
+        # Virtual positions place them just below the lyric space; the title
+        # (last outro line) centers at outro_static_pos.
+        if self._outro_lines and self._outro_start_time is not None and t >= self._outro_start_time:
+            n_outro = len(self._outro_lines)
+            outro_static_pos = (len(self.lines) - 1 + max_dist) * self.line_height
+            is_static = t >= self._outro_start_time + INTRO_SCROLL_SECONDS
+            for idx, text in enumerate(self._outro_lines):
+                # title (last, idx=n_outro-1) at outro_static_pos;
+                # artist (idx=0) one slot above (offset = -1 for 2-line outro)
+                offset = idx - (n_outro - 1)
+                virt_y = outro_static_pos + offset * self.line_height
+                screen_y = virt_y - scroll_pos + center_y
+                dist_lines = abs(screen_y - center_y) / self.line_height
+                if dist_lines >= max_dist:
+                    continue
+                is_active = (idx == n_outro - 1) and is_static
+                visible.append(LineRenderInfo(
+                    text=text,
+                    screen_y=screen_y,
+                    alpha=self._screen_pos_to_alpha(screen_y),
+                    is_active=is_active,
+                ))
+            if is_static:
+                return visible  # lyric lines fully faded — skip their loop
 
         # Lyric lines
         for i, line in enumerate(self.lines):
