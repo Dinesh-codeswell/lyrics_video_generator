@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -877,6 +878,10 @@ class TimelineEditorPanel(QGroupBox):
         self._scroll_timer.setInterval(16)
         self._scroll_timer.timeout.connect(self._smooth_scroll_tick)
 
+        # Interpolation state for smooth cursor during playback
+        self._interp_base_s:    float = 0.0
+        self._interp_base_wall: float = 0.0
+
         self._build_ui()
         self._connect_player()
 
@@ -1134,10 +1139,14 @@ class TimelineEditorPanel(QGroupBox):
         self._player.playback_state_changed.connect(self._on_playback_state_changed)
 
     def _on_position_changed(self, ms: int) -> None:
-        # During playback the timer drives cursor + scroll together in one frame.
-        # Only update cursor here when paused (e.g. user is seeking).
+        # Always refresh the interpolation anchor so the tick handler starts
+        # from the correct baseline after every discrete backend update.
+        self._interp_base_s    = ms / 1000.0
+        self._interp_base_wall = time.perf_counter()
+        # During playback the timer drives cursor + scroll; only update
+        # cursor directly when paused (e.g. user is seeking).
         if not self._player.is_playing:
-            self._canvas.set_cursor(ms / 1000.0)
+            self._canvas.set_cursor(self._interp_base_s)
 
     def _on_duration_changed(self, ms: int) -> None:
         self._duration_s = ms / 1000.0
@@ -1148,13 +1157,26 @@ class TimelineEditorPanel(QGroupBox):
     def _on_playback_state_changed(self, state) -> None:
         from PyQt6.QtMultimedia import QMediaPlayer
         if state == QMediaPlayer.PlaybackState.PlayingState:
+            # Anchor interpolation base at the moment playback begins.
+            # positionChanged fires shortly after play(), but anchoring here
+            # prevents the first tick from using a stale base from a previous session.
+            self._interp_base_s    = self._player.position / 1000.0
+            self._interp_base_wall = time.perf_counter()
             self._scroll_timer.start()
         else:
             self._scroll_timer.stop()
 
     def _smooth_scroll_tick(self) -> None:
-        """Single update point during playback: move cursor and scroll together."""
-        t        = self._player.position / 1000.0
+        """Single update point during playback: move cursor and scroll together.
+
+        Uses wall-clock interpolation between discrete positionChanged events to
+        eliminate stall-then-jump vibration from AVFoundation's non-linear position
+        reporting on macOS.
+        """
+        elapsed  = time.perf_counter() - self._interp_base_wall
+        t        = self._interp_base_s + elapsed
+        if self._duration_s > 0.0:
+            t = min(t, self._duration_s)
         cursor_x = int(t * self._px_per_sec())
         self._canvas.set_cursor(t)
         if self._follow_playhead:
