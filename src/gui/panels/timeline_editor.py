@@ -20,6 +20,7 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDoubleSpinBox,
     QGroupBox,
     QHBoxLayout,
@@ -30,6 +31,7 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QSlider,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -58,6 +60,20 @@ CANVAS_H        = RULER_H + TRACK_H
 HIT_RADIUS      = 8       # px — marker click detection half-width
 MIN_GAP_S       = 0.05    # minimum seconds between adjacent markers
 SNAP_STEP_S     = 0.1     # snap-grid resolution in seconds
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Beat-grid helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _seconds_to_beats(t_s: float, bpm: float, offset_s: float = 0.0) -> float:
+    """Convert a time in seconds to a beat position (fractional beats from beat 1)."""
+    return (t_s - offset_s) * bpm / 60.0
+
+
+def _beats_to_seconds(beat: float, bpm: float, offset_s: float = 0.0) -> float:
+    """Convert a beat position to seconds."""
+    return beat * 60.0 / bpm + offset_s
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -105,6 +121,13 @@ class _TimelineCanvas(QWidget):
         self._outro_start_t: float | None = None
         self._dragging_outro: bool = False
 
+        # Beat mode state
+        self._beat_mode: bool = False
+        self._bpm: float = 120.0
+        self._time_sig_num: int = 4
+        self._beat_offset_s: float = 0.0
+        self._snap_subdivision: float = 0.25  # fraction of a beat (default: 1/4)
+
         self._update_width()
 
     # ── public API ────────────────────────────────────────────────────────────
@@ -132,6 +155,29 @@ class _TimelineCanvas(QWidget):
 
     def set_snap(self, enabled: bool) -> None:
         self._snap = enabled
+
+    def set_beat_params(
+        self,
+        beat_mode: bool,
+        bpm: float,
+        time_sig_num: int,
+        offset_s: float,
+        snap_subdivision: float,
+    ) -> None:
+        self._beat_mode = beat_mode
+        self._bpm = bpm
+        self._time_sig_num = time_sig_num
+        self._beat_offset_s = offset_s
+        self._snap_subdivision = snap_subdivision
+        self.update()
+
+    def _snap_time(self, t: float) -> float:
+        """Snap a time value to the current grid (beat subdivision or 0.1s)."""
+        if self._beat_mode and self._bpm > 0 and self._snap_subdivision > 0:
+            b = _seconds_to_beats(t, self._bpm, self._beat_offset_s)
+            b = round(b / self._snap_subdivision) * self._snap_subdivision
+            return _beats_to_seconds(b, self._bpm, self._beat_offset_s)
+        return round(t / SNAP_STEP_S) * SNAP_STEP_S
 
     def set_intro_marker(self, t: float | None) -> None:
         self._intro_end_t = t
@@ -190,6 +236,10 @@ class _TimelineCanvas(QWidget):
         p.setFont(font)
         fm = QFontMetrics(font)
 
+        if self._beat_mode:
+            self._paint_beat_ruler(p, fm)
+            return
+
         major_s, minor_s = self._tick_granularity()
 
         # Minor ticks
@@ -211,6 +261,62 @@ class _TimelineCanvas(QWidget):
             p.setPen(QColor("#cccccc"))
             p.drawText(x - lw // 2, RULER_H - 14, label)
             t = round(t + major_s, 6)
+
+    def _paint_beat_ruler(self, p: QPainter, fm: QFontMetrics) -> None:
+        """Draw a beat/bar ruler when beat mode is active."""
+        bpm = self._bpm
+        offset = self._beat_offset_s
+        beats_per_bar = self._time_sig_num
+        beat_s = 60.0 / bpm
+        bar_s = beats_per_bar * beat_s
+        subdiv = self._snap_subdivision
+
+        beat_px = beat_s * self._px_per_sec
+        subdiv_px = subdiv * beat_s * self._px_per_sec
+
+        draw_beats = beat_px >= 12
+        draw_subdivs = subdiv < 1.0 and subdiv_px >= 6
+
+        # Start at the first bar before t=0
+        first_bar = int(_seconds_to_beats(0.0, bpm, offset) / beats_per_bar)
+        end_bar = int(_seconds_to_beats(self._duration_s + bar_s, bpm, offset) / beats_per_bar) + 1
+
+        for bar_num in range(first_bar, end_bar + 1):
+            bar_beat = bar_num * beats_per_bar  # absolute beat index of bar start
+            bar_t = _beats_to_seconds(bar_beat, bpm, offset)
+            if bar_t > self._duration_s + bar_s:
+                break
+
+            # Bar line (major)
+            bx = self._time_to_x(bar_t)
+            p.setPen(QPen(QColor("#888888"), 1))
+            p.drawLine(bx, RULER_H - 14, bx, RULER_H)
+            label = str(bar_num + 1)
+            lw = fm.horizontalAdvance(label)
+            p.setPen(QColor("#cccccc"))
+            p.drawText(bx - lw // 2, RULER_H - 15, label)
+
+            if draw_beats:
+                for b in range(1, beats_per_bar):
+                    beat_t = _beats_to_seconds(bar_beat + b, bpm, offset)
+                    bx2 = self._time_to_x(beat_t)
+                    p.setPen(QPen(QColor("#666666"), 1))
+                    p.drawLine(bx2, RULER_H - 8, bx2, RULER_H)
+                    if beat_px >= 30:
+                        bl = str(b + 1)
+                        blw = fm.horizontalAdvance(bl)
+                        p.setPen(QColor("#999999"))
+                        p.drawText(bx2 - blw // 2, RULER_H - 9, bl)
+
+            if draw_subdivs:
+                total_subdivs = int(beats_per_bar / subdiv)
+                for s in range(1, total_subdivs):
+                    if s % int(1.0 / subdiv) == 0:
+                        continue  # skip beat boundaries already drawn
+                    subdiv_t = _beats_to_seconds(bar_beat + s * subdiv, bpm, offset)
+                    sx = self._time_to_x(subdiv_t)
+                    p.setPen(QPen(QColor("#444444"), 1))
+                    p.drawLine(sx, RULER_H - 4, sx, RULER_H)
 
     def _paint_track(self, p: QPainter) -> None:
         w = self.width()
@@ -325,9 +431,17 @@ class _TimelineCanvas(QWidget):
 
         # Time readout floating in the ruler next to the cursor
         t = self._cursor_s
-        total_s = int(t)
-        tenths = int((t - total_s) * 10)
-        label = f"{total_s // 60}:{total_s % 60:02d}.{tenths}"
+        if self._beat_mode and self._bpm > 0:
+            raw_beat = _seconds_to_beats(t, self._bpm, self._beat_offset_s)
+            bar = int(raw_beat // self._time_sig_num) + 1
+            beat_in_bar = int(raw_beat % self._time_sig_num) + 1
+            frac = raw_beat % 1.0
+            sub = int(frac / self._snap_subdivision) + 1 if self._snap_subdivision > 0 else 1
+            label = f"{bar}.{beat_in_bar}.{sub}"
+        else:
+            total_s = int(t)
+            tenths = int((t - total_s) * 10)
+            label = f"{total_s // 60}:{total_s % 60:02d}.{tenths}"
         font = QFont()
         font.setPointSize(8)
         font.setBold(True)
@@ -385,7 +499,7 @@ class _TimelineCanvas(QWidget):
             x = event.position().x()
             new_t = max(0.0, min(self._duration_s, self._x_to_time(x)))
             if self._snap:
-                new_t = round(new_t / SNAP_STEP_S) * SNAP_STEP_S
+                new_t = self._snap_time(new_t)
             self._outro_start_t = new_t
             self.outro_marker_moved.emit(new_t)
             self.update()
@@ -394,7 +508,7 @@ class _TimelineCanvas(QWidget):
             x = event.position().x()
             new_t = max(0.0, min(self._duration_s, self._x_to_time(x)))
             if self._snap:
-                new_t = round(new_t / SNAP_STEP_S) * SNAP_STEP_S
+                new_t = self._snap_time(new_t)
             self._intro_end_t = new_t
             self.intro_marker_moved.emit(new_t)
             self.update()
@@ -413,7 +527,7 @@ class _TimelineCanvas(QWidget):
         )
         new_t = max(min_t, min(max_t, new_t))
         if self._snap:
-            new_t = round(new_t / SNAP_STEP_S) * SNAP_STEP_S
+            new_t = self._snap_time(new_t)
 
         self._markers[i].start_time = new_t
         self.marker_moved.emit(i, new_t)
@@ -487,6 +601,11 @@ class _MarkerDetailArea(QWidget):
         self._start_spin.valueChanged.connect(self._on_start_changed)
         row.addWidget(self._start_spin)
 
+        self._beat_lbl = QLabel("")
+        self._beat_lbl.setStyleSheet("color: #888888; font-style: italic;")
+        self._beat_lbl.setFixedWidth(110)
+        row.addWidget(self._beat_lbl)
+
         row.addWidget(QLabel("End:"))
         self._end_lbl = QLabel("—")
         self._end_lbl.setFixedWidth(58)
@@ -541,6 +660,18 @@ class _MarkerDetailArea(QWidget):
 
     def set_dirty(self, dirty: bool) -> None:
         self._dirty_lbl.setText("● Unsaved" if dirty else "")
+
+    def refresh_beat_label(
+        self, beat_mode: bool, bpm: float, time_sig: int, offset: float
+    ) -> None:
+        if not beat_mode or self._index < 0 or bpm <= 0:
+            self._beat_lbl.setText("")
+            return
+        t = self._start_spin.value()
+        raw_beat = _seconds_to_beats(t, bpm, offset)
+        bar = int(raw_beat // time_sig) + 1
+        beat_in_bar = (raw_beat % time_sig) + 1
+        self._beat_lbl.setText(f"Bar {bar}, Beat {beat_in_bar:.2f}")
 
     # ── internals ────────────────────────────────────────────────────────────
 
@@ -773,6 +904,9 @@ class TimelineEditorPanel(QGroupBox):
         self._artist = data.get("artist") or ""
         self._intro_end_t = data.get("intro_end_time")
         self._outro_start_t = data.get("outro_start_time")
+        _bpm        = data.get("bpm") or 120.0
+        _time_sig   = data.get("time_sig_num") or 4
+        _beat_off   = data.get("beat_offset_s") or 0.0
 
         # Record which lyric-line indices are followed by a mid-array gap entry,
         # so they survive the round-trip through save_lyrics().
@@ -805,6 +939,26 @@ class TimelineEditorPanel(QGroupBox):
         self._detail.load(-1, self._markers, self._duration_s)
         self._detail.set_dirty(False)
         self.setTitle(f"Timeline Editor — {self._title}")
+
+        # Restore beat settings without triggering dirty
+        _beat_widgets = (
+            self._bpm_spin, self._time_sig_spin,
+            self._beat_offset_spin, self._subdiv_combo, self._beat_mode_cb,
+        )
+        for _w in _beat_widgets:
+            _w.blockSignals(True)
+        self._bpm_spin.setValue(_bpm)
+        self._time_sig_spin.setValue(_time_sig)
+        self._beat_offset_spin.setValue(_beat_off)
+        self._beat_mode_cb.setChecked(False)  # always off on song load
+        for _w in _beat_widgets:
+            _w.blockSignals(False)
+        # Push params to canvas/detail (no dirty side-effect)
+        self._canvas.set_beat_params(
+            False, _bpm, _time_sig, _beat_off,
+            self._subdiv_combo.currentData(),
+        )
+        self._detail.refresh_beat_label(False, _bpm, _time_sig, _beat_off)
 
     # ── UI construction ───────────────────────────────────────────────────────
 
@@ -874,6 +1028,52 @@ class TimelineEditorPanel(QGroupBox):
         self._snap_cb.setChecked(True)
         self._snap_cb.toggled.connect(self._canvas.set_snap)
         row.addWidget(self._snap_cb)
+
+        self._beat_mode_cb = QCheckBox("Beat Mode")
+        self._beat_mode_cb.setToolTip("Switch ruler and snap to beat/bar grid")
+        self._beat_mode_cb.toggled.connect(self._on_beat_mode_toggled)
+        row.addWidget(self._beat_mode_cb)
+
+        self._bpm_spin = QDoubleSpinBox()
+        self._bpm_spin.setRange(20.0, 300.0)
+        self._bpm_spin.setValue(120.0)
+        self._bpm_spin.setDecimals(1)
+        self._bpm_spin.setSuffix(" BPM")
+        self._bpm_spin.setFixedWidth(90)
+        self._bpm_spin.setEnabled(False)
+        self._bpm_spin.setToolTip("Beats per minute")
+        self._bpm_spin.valueChanged.connect(self._on_beat_params_changed)
+        row.addWidget(self._bpm_spin)
+
+        self._time_sig_spin = QSpinBox()
+        self._time_sig_spin.setRange(1, 16)
+        self._time_sig_spin.setValue(4)
+        self._time_sig_spin.setSuffix("/4")
+        self._time_sig_spin.setFixedWidth(52)
+        self._time_sig_spin.setEnabled(False)
+        self._time_sig_spin.setToolTip("Beats per bar (time signature numerator)")
+        self._time_sig_spin.valueChanged.connect(self._on_beat_params_changed)
+        row.addWidget(self._time_sig_spin)
+
+        self._beat_offset_spin = QDoubleSpinBox()
+        self._beat_offset_spin.setRange(-10.0, 60.0)
+        self._beat_offset_spin.setValue(0.0)
+        self._beat_offset_spin.setDecimals(3)
+        self._beat_offset_spin.setSuffix("s off")
+        self._beat_offset_spin.setFixedWidth(90)
+        self._beat_offset_spin.setEnabled(False)
+        self._beat_offset_spin.setToolTip("Beat 1 offset in seconds (for pickup bars or intro silence)")
+        self._beat_offset_spin.valueChanged.connect(self._on_beat_params_changed)
+        row.addWidget(self._beat_offset_spin)
+
+        self._subdiv_combo = QComboBox()
+        for lbl, val in [("1 beat", 1.0), ("1/2 beat", 0.5), ("1/4 beat", 0.25), ("1/8 beat", 0.125)]:
+            self._subdiv_combo.addItem(lbl, val)
+        self._subdiv_combo.setCurrentIndex(2)  # default: 1/4 beat
+        self._subdiv_combo.setEnabled(False)
+        self._subdiv_combo.setToolTip("Snap resolution within a beat")
+        self._subdiv_combo.currentIndexChanged.connect(self._on_beat_params_changed)
+        row.addWidget(self._subdiv_combo)
 
         self._follow_cb = QCheckBox("Follow playhead")
         self._follow_cb.setChecked(True)
@@ -1112,6 +1312,36 @@ class TimelineEditorPanel(QGroupBox):
         self._outro_start_t = t
         self._set_extras_dirty()
 
+    # ── beat mode handlers ────────────────────────────────────────────────────
+
+    def _on_beat_mode_toggled(self, enabled: bool) -> None:
+        for w in (self._bpm_spin, self._time_sig_spin, self._beat_offset_spin, self._subdiv_combo):
+            w.setEnabled(enabled)
+        if enabled:
+            self._snap_cb.setText(f"Snap {self._subdiv_combo.currentText()}")
+        else:
+            self._snap_cb.setText("Snap 0.1s")
+        self._on_beat_params_changed()
+
+    def _on_beat_params_changed(self) -> None:
+        enabled = self._beat_mode_cb.isChecked()
+        if enabled:
+            self._snap_cb.setText(f"Snap {self._subdiv_combo.currentText()}")
+        self._canvas.set_beat_params(
+            enabled,
+            self._bpm_spin.value(),
+            self._time_sig_spin.value(),
+            self._beat_offset_spin.value(),
+            self._subdiv_combo.currentData(),
+        )
+        self._detail.refresh_beat_label(
+            enabled,
+            self._bpm_spin.value(),
+            self._time_sig_spin.value(),
+            self._beat_offset_spin.value(),
+        )
+        self._set_extras_dirty()
+
     def _set_extras_dirty(self) -> None:
         """Mark dirty for changes that bypass the undo stack (title/artist/intro)."""
         self._dirty = True
@@ -1148,6 +1378,9 @@ class TimelineEditorPanel(QGroupBox):
             data["outro_start_time"] = round(self._outro_start_t, 3)
         else:
             data.pop("outro_start_time", None)
+        data["bpm"] = round(self._bpm_spin.value(), 1)
+        data["time_sig_num"] = self._time_sig_spin.value()
+        data["beat_offset_s"] = round(self._beat_offset_spin.value(), 3)
 
         raw_lyrics = []
         for i, m in enumerate(self._markers):
@@ -1171,6 +1404,16 @@ class TimelineEditorPanel(QGroupBox):
             self.lyrics_modified.emit()
 
     # ── public API for MainWindow ─────────────────────────────────────────────
+
+    @property
+    def step_size_ms(self) -> int:
+        """Current snap step in ms — 100ms in time mode, beat subdivision in beat mode."""
+        if self._beat_mode_cb.isChecked():
+            subdiv = self._subdiv_combo.currentData()
+            bpm = self._bpm_spin.value()
+            if bpm > 0 and subdiv and subdiv > 0:
+                return max(1, int(60_000 / bpm * subdiv))
+        return 100
 
     def undo(self) -> None:
         self._undo_stack.undo()

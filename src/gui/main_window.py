@@ -150,7 +150,7 @@ class MainWindow(QMainWindow):
             return
         if self._audio_player.is_playing:
             return
-        step_ms = 100  # 0.1s — matches snap grid
+        step_ms = self._timeline.step_size_ms
         snapped = round(self._audio_player.position / step_ms) * step_ms
         new_pos = max(0, snapped + direction * step_ms)
         self._audio_player.seek(new_pos)
