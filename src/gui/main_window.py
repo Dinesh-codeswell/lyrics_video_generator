@@ -57,6 +57,7 @@ class MainWindow(QMainWindow):
         # Cross-panel wiring (all panels now exist)
         self._theme_editor.theme_changed.connect(self._export_bar.on_theme_changed)
         self._timeline.lyrics_modified.connect(self._on_lyrics_dirty)
+        self._timeline.lyrics_saved.connect(self._on_lyrics_saved)
         self._theme_editor.theme_dirty_changed.connect(self._on_theme_dirty)
         self._export_bar.set_pre_export_check(self._check_dirty_before_export)
 
@@ -176,6 +177,10 @@ class MainWindow(QMainWindow):
 
     def _on_lyrics_dirty(self) -> None:
         self._lyrics_dirty = True
+        self._update_title()
+
+    def _on_lyrics_saved(self) -> None:
+        self._lyrics_dirty = False
         self._update_title()
 
     def _on_theme_dirty(self, dirty: bool) -> None:

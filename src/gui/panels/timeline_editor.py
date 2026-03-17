@@ -851,6 +851,7 @@ class TimelineEditorPanel(QGroupBox):
     """
 
     lyrics_modified = pyqtSignal()   # emitted when unsaved edits exist
+    lyrics_saved    = pyqtSignal()   # emitted after a successful save
 
     def __init__(self, audio_player: AudioPlayer, parent: QWidget | None = None):
         super().__init__("Timeline Editor", parent)
@@ -1363,6 +1364,7 @@ class TimelineEditorPanel(QGroupBox):
         # so if the stack was already clean, cleanChanged won't fire again.
         self._dirty = False
         self._detail.set_dirty(False)
+        self.lyrics_saved.emit()
 
     def _write_lyrics(self, path: str) -> None:
         filepath = Path(path)
