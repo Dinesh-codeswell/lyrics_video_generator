@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.core.song_resolver import THEMES_DIR
 from src.gui.audio_player import AudioPlayer
 from src.gui.panels.export_bar import ExportBar
 from src.gui.panels.preview_panel import PreviewPanel
@@ -258,17 +259,25 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _on_song_loaded(self, paths: dict):
+        msgs = []
         if self._lyrics_dirty:
+            msgs.append("lyrics")
+        if self._theme_dirty:
+            msgs.append("theme")
+        if msgs:
             ans = QMessageBox.question(
                 self,
                 "Unsaved Changes",
-                "Lyrics have unsaved changes. Discard and load new song?",
+                f"You have unsaved changes to {', '.join(msgs)}. Discard and load new song?",
                 QMessageBox.StandardButton.Save
                 | QMessageBox.StandardButton.Discard
                 | QMessageBox.StandardButton.Cancel,
             )
             if ans == QMessageBox.StandardButton.Save:
-                self._timeline.save_lyrics()
+                if self._lyrics_dirty:
+                    self._timeline.save_lyrics()
+                if self._theme_dirty:
+                    self._theme_editor.save_theme()
             elif ans == QMessageBox.StandardButton.Cancel:
                 return
 
@@ -282,6 +291,14 @@ class MainWindow(QMainWindow):
         self._timeline.load_song(paths)
         self._preview.song_loaded(paths)
         self._export_bar.song_loaded(paths)
+
+        # Auto-load per-song theme
+        theme_path = paths.get("theme")
+        if theme_path:
+            self._theme_editor.load_theme_file(theme_path)
+        else:
+            per_song_path = str(THEMES_DIR / f"{self._song_name}.json")
+            self._theme_editor.reset_for_song(per_song_path)
 
     def _on_new(self):
         from src.core.song_resolver import resolve_song, scan_songs

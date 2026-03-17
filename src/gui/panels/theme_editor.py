@@ -182,6 +182,21 @@ class ThemeEditorPanel(QGroupBox):
         except OSError as exc:
             QMessageBox.critical(self, "Save Error", str(exc))
 
+    @property
+    def current_filepath(self) -> Path | None:
+        return self._filepath
+
+    def reset_for_song(self, per_song_path: str) -> None:
+        """Load defaults and pre-set the save path to the per-song theme file.
+
+        Used when a song has no theme file yet — the first ⌘⇧S will create it
+        at *per_song_path* without prompting for a location.
+        """
+        self._theme = load_theme()
+        self._filepath = Path(per_song_path)
+        self._populate_controls()
+        self.theme_changed.emit(self._theme)
+
     def get_theme(self) -> Theme:
         return self._theme
 

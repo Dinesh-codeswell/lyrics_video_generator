@@ -10,6 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 INPUT_AUDIO_DIR = PROJECT_ROOT / "input" / "audio"
 INPUT_LYRICS_DIR = PROJECT_ROOT / "input" / "lyrics"
 INPUT_BACKGROUNDS_DIR = PROJECT_ROOT / "input" / "backgrounds"
+THEMES_DIR = PROJECT_ROOT / "themes"
 
 AUDIO_EXTENSIONS = (".mp3", ".wav")
 
@@ -104,10 +105,15 @@ def resolve_song(
         if candidate.exists():
             background_path = candidate
 
+    # Resolve theme
+    theme_candidate = THEMES_DIR / f"{song_name}.json"
+    theme_path: Path | None = theme_candidate if theme_candidate.exists() else None
+
     return {
         "lyrics": lyrics_path,
         "audio": audio_path,
         "background": background_path,
+        "theme": theme_path,
     }
 
 

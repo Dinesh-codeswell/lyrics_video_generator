@@ -7,8 +7,6 @@ import click
 from src.core.song_resolver import resolve_song
 from src.core.video_generator import generate_video
 
-DEFAULT_THEME = Path(__file__).resolve().parent.parent.parent / "themes" / "durt_nurs.json"
-
 
 @click.command()
 @click.option("--song", default=None, help="Song name to auto-match from input/ folders.")
@@ -16,7 +14,7 @@ DEFAULT_THEME = Path(__file__).resolve().parent.parent.parent / "themes" / "durt
 @click.option("--audio", default=None, type=click.Path(exists=True), help="Path to audio file.")
 @click.option("--background", default=None, type=click.Path(exists=True), help="Path to background video.")
 @click.option("--no-background", is_flag=True, default=False, help="Force solid color background.")
-@click.option("--theme", type=click.Path(exists=True), default=None, help="Path to theme JSON (default: durt_nurs).")
+@click.option("--theme", type=click.Path(exists=True), default=None, help="Path to theme JSON (default: themes/<song-name>.json if it exists).")
 @click.option("--output", type=click.Path(), default=None, help="Output path (default: output/<title>.mp4).")
 @click.option("--fps", type=int, default=30, help="Frame rate (default: 30).")
 @click.option("--preview", is_flag=True, default=False, help="Generate only first 30 seconds.")
@@ -46,8 +44,14 @@ def cli(song, lyrics, audio, background, no_background, theme, output, fps, prev
         lyrics = str(resolved["lyrics"])
         audio = str(resolved["audio"])
         background_path = resolved["background"]
+        if not theme:
+            per_song_theme = resolved.get("theme")
+            theme_path = str(per_song_theme) if per_song_theme else None
+        else:
+            theme_path = theme
     elif lyrics and audio:
         background_path = Path(background) if background else None
+        theme_path = theme
     else:
         raise click.UsageError(
             "Provide either --song <name> or both --lyrics and --audio.\n"
@@ -57,8 +61,6 @@ def cli(song, lyrics, audio, background, no_background, theme, output, fps, prev
 
     if no_background:
         background_path = None
-
-    theme_path = theme if theme else str(DEFAULT_THEME)
 
     if output is None:
         if song:
