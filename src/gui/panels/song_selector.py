@@ -46,7 +46,7 @@ class SongSelectorPanel(QGroupBox):
         super().__init__("Song Selector", parent)
         self._loaded_name: str | None = None
         self._build_ui()
-        self._scan()
+        self.scan()
 
     # ------------------------------------------------------------------
     # UI construction
@@ -68,7 +68,7 @@ class SongSelectorPanel(QGroupBox):
 
         btn_row = QHBoxLayout()
         refresh_btn = QPushButton("Refresh")
-        refresh_btn.clicked.connect(self._scan)
+        refresh_btn.clicked.connect(self.scan)
 
         self._load_btn = QPushButton("Load Song")
         self._load_btn.setEnabled(False)
@@ -85,7 +85,7 @@ class SongSelectorPanel(QGroupBox):
     # Scanning
     # ------------------------------------------------------------------
 
-    def _scan(self):
+    def scan(self):
         self._list.clear()
         songs = scan_songs()
 

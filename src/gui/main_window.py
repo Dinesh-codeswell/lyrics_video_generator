@@ -7,6 +7,7 @@ from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QAbstractSpinBox,
     QApplication,
+    QDialog,
     QFileDialog,
     QGroupBox,
     QLabel,
@@ -70,7 +71,7 @@ class MainWindow(QMainWindow):
         menubar = self.menuBar()
 
         file_menu = menubar.addMenu("File")
-        file_menu.addAction("New").triggered.connect(self._on_new)
+        file_menu.addAction("New Song from Text\u2026").triggered.connect(self._on_new)
         file_menu.addAction("Open Theme…").triggered.connect(self._on_open_theme)
         file_menu.addAction("Save Theme").triggered.connect(self._on_save_theme)
         file_menu.addSeparator()
@@ -278,7 +279,24 @@ class MainWindow(QMainWindow):
         self._export_bar.song_loaded(paths)
 
     def _on_new(self):
-        pass
+        from src.core.song_resolver import resolve_song, scan_songs
+        from src.gui.dialogs.new_song_dialog import NewSongDialog
+
+        dlg = NewSongDialog(self)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        slug = dlg.result_slug
+        self._song_selector.scan()
+
+        # Auto-load if audio is already present
+        songs = {s.name: s for s in scan_songs()}
+        info = songs.get(slug)
+        if info and info.is_loadable:
+            paths = resolve_song(slug)
+            self._song_selector._loaded_name = slug
+            self._song_selector._loaded_label.setText(f"Loaded: {slug}")
+            self._on_song_loaded({k: str(v) if v else None for k, v in paths.items()})
 
     def _on_open_theme(self):
         path, _ = QFileDialog.getOpenFileName(

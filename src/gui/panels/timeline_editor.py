@@ -733,6 +733,7 @@ class TimelineEditorPanel(QGroupBox):
         self._artist:      str = ""
         self._intro_end_t:  float | None = None
         self._outro_start_t: float | None = None
+        self._gap_after_indices: set[int] = set()
         self._zoom         = 1.0           # multiplier on BASE_PX_PER_SEC
         self._stamp_cursor = 0             # next marker index to stamp via Enter
 
@@ -772,6 +773,25 @@ class TimelineEditorPanel(QGroupBox):
         self._artist = data.get("artist") or ""
         self._intro_end_t = data.get("intro_end_time")
         self._outro_start_t = data.get("outro_start_time")
+
+        # Record which lyric-line indices are followed by a mid-array gap entry,
+        # so they survive the round-trip through save_lyrics().
+        self._gap_after_indices = set()
+        try:
+            raw_json = json.loads(Path(lyrics_path).read_text(encoding="utf-8"))
+            lyric_idx = -1
+            for entry in raw_json.get("lyrics", []):
+                if entry.get("text") == "":
+                    if lyric_idx >= 0:
+                        self._gap_after_indices.add(lyric_idx)
+                else:
+                    lyric_idx += 1
+            # The final empty entry is the end marker; remove it from the set
+            # (it's always re-appended explicitly by _write_lyrics).
+            self._gap_after_indices.discard(lyric_idx)
+        except Exception:
+            pass  # Non-fatal; gaps simply won't be preserved
+
         self._dirty = False
         self._stamp_cursor = 0
         self._undo_stack.clear()
@@ -1129,10 +1149,11 @@ class TimelineEditorPanel(QGroupBox):
         else:
             data.pop("outro_start_time", None)
 
-        raw_lyrics = [
-            {"time": round(m.start_time, 3), "text": m.text}
-            for m in self._markers
-        ]
+        raw_lyrics = []
+        for i, m in enumerate(self._markers):
+            raw_lyrics.append({"time": round(m.start_time, 3), "text": m.text})
+            if i in self._gap_after_indices:
+                raw_lyrics.append({"time": round(m.start_time, 3), "text": ""})
         # End marker: use audio duration when known, else preserved original
         end_t = self._duration_s if self._duration_s > 0 else self._end_marker_t
         raw_lyrics.append({"time": round(end_t, 3), "text": ""})
