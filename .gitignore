@@ -25,6 +25,10 @@ input/lyrics/*
 input/backgrounds/*
 !input/**/.gitkeep
 
+# Themes (only default.json is public; personal/song-specific themes are local)
+themes/*.json
+!themes/default.json
+
 # OS
 .DS_Store
 Thumbs.db
