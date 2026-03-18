@@ -1127,15 +1127,14 @@ class TimelineEditorPanel(QGroupBox):
         row.addWidget(QLabel("Zoom:"))
 
         self._zoom_slider = QSlider(Qt.Orientation.Horizontal)
-        self._zoom_slider.setRange(1, 40)    # slider value / 10 = zoom multiplier
+        self._zoom_slider.setRange(1, 20)    # slider value / 10 = zoom multiplier (0.1×–2.0×)
         self._zoom_slider.setValue(10)        # 1.0×
-        self._zoom_slider.setFixedWidth(140)
+        self._zoom_slider.setMinimumWidth(60)
         self._zoom_slider.setToolTip("Zoom timeline (Ctrl+scroll also works)")
         self._zoom_slider.valueChanged.connect(self._on_zoom_slider_changed)
         row.addWidget(self._zoom_slider)
 
         self._zoom_lbl = QLabel("1.0×")
-        self._zoom_lbl.setFixedWidth(36)
         row.addWidget(self._zoom_lbl)
 
         self._snap_cb = QCheckBox("Snap 0.1s")
@@ -1308,7 +1307,7 @@ class TimelineEditorPanel(QGroupBox):
             if wheel.modifiers() & Qt.KeyboardModifier.ControlModifier:
                 step = 1 if wheel.angleDelta().y() > 0 else -1
                 self._zoom_slider.setValue(
-                    max(1, min(40, self._zoom_slider.value() + step))
+                    max(1, min(20, self._zoom_slider.value() + step))
                 )
                 return True   # consume — don't scroll the scrollbar
         return super().eventFilter(obj, event)
