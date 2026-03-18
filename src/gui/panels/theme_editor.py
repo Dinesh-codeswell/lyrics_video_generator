@@ -505,11 +505,17 @@ class ThemeEditorPanel(QGroupBox):
         )
         sec.add_row("Width", self._logo_width_slider, self._logo_width_spin)
 
-        # Alignment combo
+        # Logo alignment combo
         self._logo_align_combo = QComboBox()
         self._logo_align_combo.addItems(["left", "center", "right"])
         self._logo_align_combo.currentTextChanged.connect(self._on_logo_align_changed)
-        sec.add_row("Align", self._logo_align_combo)
+        sec.add_row("Logo Align", self._logo_align_combo)
+
+        # Title text alignment combo
+        self._title_align_combo = QComboBox()
+        self._title_align_combo.addItems(["left", "center", "right"])
+        self._title_align_combo.currentTextChanged.connect(self._on_title_align_changed)
+        sec.add_row("Title Align", self._title_align_combo)
 
         return sec
 
@@ -580,6 +586,9 @@ class ThemeEditorPanel(QGroupBox):
             idx = self._logo_align_combo.findText(t.logo_h_align)
             if idx >= 0:
                 self._logo_align_combo.setCurrentIndex(idx)
+            idx = self._title_align_combo.findText(t.title_h_align)
+            if idx >= 0:
+                self._title_align_combo.setCurrentIndex(idx)
 
         finally:
             self._blocking = False
@@ -747,6 +756,13 @@ class ThemeEditorPanel(QGroupBox):
         if self._blocking:
             return
         self._theme.logo_h_align = value
+        self._set_theme_dirty(True)
+        self.theme_changed.emit(self._theme)
+
+    def _on_title_align_changed(self, value: str) -> None:
+        if self._blocking:
+            return
+        self._theme.title_h_align = value
         self._set_theme_dirty(True)
         self.theme_changed.emit(self._theme)
 

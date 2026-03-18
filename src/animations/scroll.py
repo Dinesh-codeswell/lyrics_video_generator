@@ -26,6 +26,7 @@ class LineRenderInfo:
     screen_y: float   # center y position on screen in pixels
     alpha: float      # 0.0 – 1.0
     is_active: bool
+    is_title: bool = False  # True for the title text line in intro/outro cards
 
 
 class ScrollingAnimation:
@@ -206,11 +207,13 @@ class ScrollingAnimation:
                     continue
                 # Title (last intro line) is rendered as "active" during static phase
                 is_active = (idx == n_intro - 1) and is_static
+                is_title = (idx == n_intro - 1) and text != "__LOGO__"
                 visible.append(LineRenderInfo(
                     text=text,
                     screen_y=screen_y,
                     alpha=self._screen_pos_to_alpha(screen_y),
                     is_active=is_active,
+                    is_title=is_title,
                 ))
 
             # During the fully static phase lyric lines are beyond max_dist anyway,
@@ -235,11 +238,13 @@ class ScrollingAnimation:
                 if dist_lines >= max_dist:
                     continue
                 is_active = (idx == n_outro - 1) and is_static
+                is_title = (idx == n_outro - 1) and text != "__LOGO__"
                 visible.append(LineRenderInfo(
                     text=text,
                     screen_y=screen_y,
                     alpha=self._screen_pos_to_alpha(screen_y),
                     is_active=is_active,
+                    is_title=is_title,
                 ))
             if is_static:
                 return visible  # lyric lines fully faded — skip their loop
@@ -281,6 +286,7 @@ class ScrollingAnimation:
                 "screen_y": li.screen_y,
                 "alpha": li.alpha,
                 "is_active": li.is_active,
+                "is_title": li.is_title,
                 "highlight_progress": highlight_progress if li.is_active else 0.0,
             }
             for li in self.get_visible_lines(t)

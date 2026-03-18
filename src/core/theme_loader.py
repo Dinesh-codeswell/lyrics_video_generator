@@ -33,6 +33,7 @@ DEFAULTS = {
     "logo_path": "",                # abs or relative path to PNG/JPG; empty = no logo
     "logo_width": 400,              # px wide; height auto-scaled to maintain aspect ratio
     "logo_h_align": "center",       # "left", "center", "right"
+    "title_h_align": "center",      # horizontal alignment for intro/outro title text
 }
 
 
@@ -67,6 +68,7 @@ class Theme:
     logo_path: str = ""
     logo_width: int = 400
     logo_h_align: str = "center"
+    title_h_align: str = "center"
 
     @property
     def effective_active_text_color(self) -> str:
@@ -150,6 +152,9 @@ def _validate_theme(data: dict, filepath) -> None:
     if "logo_h_align" in data and data["logo_h_align"] not in ("left", "center", "right"):
         errors.append("'logo_h_align': must be 'left', 'center', or 'right'")
 
+    if "title_h_align" in data and data["title_h_align"] not in ("left", "center", "right"):
+        errors.append("'title_h_align': must be 'left', 'center', or 'right'")
+
     if errors:
         label = f"theme '{filepath}'" if filepath else "theme"
         msg = f"Invalid {label}:\n" + "\n".join(f"  - {e}" for e in errors)
@@ -198,6 +203,7 @@ def load_theme(filepath: str | Path | None = None) -> Theme:
             logo_path=DEFAULTS["logo_path"],
             logo_width=DEFAULTS["logo_width"],
             logo_h_align=DEFAULTS["logo_h_align"],
+            title_h_align=DEFAULTS["title_h_align"],
         )
 
     filepath = Path(filepath)
@@ -248,4 +254,5 @@ def load_theme(filepath: str | Path | None = None) -> Theme:
         logo_path=str(merged.get("logo_path", "")),
         logo_width=int(merged.get("logo_width", 400)),
         logo_h_align=str(merged.get("logo_h_align", "center")),
+        title_h_align=str(merged.get("title_h_align", "center")),
     )

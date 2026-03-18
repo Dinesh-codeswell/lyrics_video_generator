@@ -192,7 +192,8 @@ class TextRenderer:
         else:
             img = Image.new("RGBA", (WIDTH, HEIGHT), self.theme.background_color)
 
-        x, anchor, align, col_w = self._get_horizontal_layout()
+        default_layout = self._get_horizontal_layout()
+        title_layout = self._get_h_layout_for(self.theme.title_h_align)
         highlight_mode = self.theme.highlight_mode
 
         for line_data in lines_data:
@@ -207,8 +208,10 @@ class TextRenderer:
                 continue
 
             is_active = line_data.get("is_active", False)
+            is_title = line_data.get("is_title", False)
             highlight_progress = line_data.get("highlight_progress", 0.0)
 
+            x, anchor, align, col_w = title_layout if is_title else default_layout
             font = self._get_font(is_active)
             wrapped = self._wrap_text(text, col_w, font=font)
             a = int(alpha * 255)
@@ -375,9 +378,11 @@ class TextRenderer:
 
     def _get_horizontal_layout(self) -> tuple[int, str, str, int]:
         """Return (x, anchor, align, col_w) based on theme lyric_position."""
-        pos = self.theme.lyric_position
-        col_w = self.theme.column_width
+        return self._get_h_layout_for(self.theme.lyric_position)
 
+    def _get_h_layout_for(self, pos: str) -> tuple[int, str, str, int]:
+        """Return (x, anchor, align, col_w) for the given position string."""
+        col_w = self.theme.column_width
         if pos == "left":
             return COLUMN_PADDING, "lm", "left", col_w
         elif pos == "right":
