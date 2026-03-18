@@ -46,15 +46,15 @@ Place your files in the `input/` folders:
 Then run with `--song` to auto-match by filename:
 
 ```bash
-lyric-video --song disciples-of-dysfunction
+lyric-video --song my-song
 ```
 
 Or use explicit paths:
 
 ```bash
-lyric-video --lyrics input/lyrics/disciples-of-dysfunction.json \
-            --audio input/audio/disciples-of-dysfunction.mp3 \
-            --theme themes/durt_nurs.json \
+lyric-video --lyrics input/lyrics/my-song.json \
+            --audio input/audio/my-song.mp3 \
+            --theme themes/default.json \
             --output output/video.mp4
 ```
 
@@ -77,7 +77,7 @@ The GUI provides a song browser, visual timeline editor with draggable markers, 
 | `--audio` | * | — | Path to audio file (mp3, wav, etc.) |
 | `--background` | No | auto-matched | Path to background video |
 | `--no-background` | No | off | Force solid color background |
-| `--theme` | No | `themes/durt_nurs.json` | Path to theme JSON |
+| `--theme` | No | `themes/<song-name>.json` if found, else built-in defaults | Path to theme JSON |
 | `--lyric-position` | No | theme default | Text alignment: `left`, `center`, or `right` (overrides theme) |
 | `--highlight-mode` | No | theme default | Active line style: `line`, `word`, or `character` (overrides theme) |
 | `--text-overlay` | No | `0` | Opacity (0–100) of semi-transparent strip behind lyrics |
@@ -91,30 +91,30 @@ The GUI provides a song browser, visual timeline editor with draggable markers, 
 
 ```bash
 # Auto-match mode (looks in input/ folders)
-lyric-video --song disciples-of-dysfunction
+lyric-video --song my-song
 
 # Quick preview with auto-match (first 30 seconds)
-lyric-video --song disciples-of-dysfunction --preview
+lyric-video --song my-song --preview
 
 # Explicit paths
-lyric-video --lyrics input/lyrics/disciples-of-dysfunction.json \
-            --audio input/audio/disciples-of-dysfunction.mp3
+lyric-video --lyrics input/lyrics/my-song.json \
+            --audio input/audio/my-song.mp3
 
 # Custom output path and theme
 lyric-video --lyrics my_lyrics.json --audio my_song.wav \
             --theme my_theme.json --output my_video.mp4
 
 # Override background for a song
-lyric-video --song disciples-of-dysfunction --background /path/to/custom_bg.mp4
+lyric-video --song my-song --background /path/to/custom_bg.mp4
 
 # Override style flags (all override the active theme)
-lyric-video --song disciples-of-dysfunction --lyric-position left --highlight-mode word
+lyric-video --song my-song --lyric-position left --highlight-mode word
 ```
 
 You can also run the CLI directly without installing the package:
 
 ```bash
-python -m src.cli.main --song disciples-of-dysfunction
+python -m src.cli.main --song my-song
 ```
 
 ### Notes
@@ -141,7 +141,7 @@ python -m src.cli.main --song disciples-of-dysfunction
 - `text` — the lyric text to display
 - An empty `text` field marks the end of lyrics (used for timing the final line)
 
-See `input/lyrics/disciples-of-dysfunction.json` for a complete example.
+The full schema is described in the [Lyrics Format](#lyrics-format) section above.
 
 ## Animation
 
@@ -155,11 +155,11 @@ Active-line highlighting is set via `highlight_mode` in the theme or `--highligh
 
 ## Themes
 
-Themes are JSON files that control the visual style. The default theme is `themes/durt_nurs.json`:
+Themes are JSON files that control the visual style. The included `themes/default.json` provides a neutral starting point:
 
 ```json
 {
-  "name": "Durt Nurs",
+  "name": "My Theme",
   "background_color": "#1a1a1a",
   "text_color": "#ffffff",
   "active_text_color": "#ffcc00",
@@ -263,7 +263,7 @@ lyric-video-generator/
 │   ├── lyrics/                   # lyrics JSON files (gitignored)
 │   └── backgrounds/              # looping MP4 backgrounds (gitignored)
 ├── themes/
-│   └── durt_nurs.json            # default theme
+│   └── default.json              # built-in default theme
 ├── output/                       # generated videos (gitignored)
 ├── requirements.txt
 └── pyproject.toml
