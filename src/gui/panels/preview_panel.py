@@ -26,6 +26,36 @@ from src.core.video_generator import generate_video
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Video container
+# ──────────────────────────────────────────────────────────────────────────────
+
+class _VideoContainer(QWidget):
+    """Constrains QVideoWidget to 16:9 and shows a dark-gray surround so the
+    video boundary is visible against dark/black video content."""
+
+    _RATIO = 16 / 9
+
+    def __init__(self, video_widget: QVideoWidget, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setStyleSheet("background: #2a2a2a;")
+        self._video = video_widget
+        self._video.setParent(self)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._fit()
+
+    def _fit(self) -> None:
+        w, h = self.width(), self.height()
+        if w <= 0 or h <= 0:
+            return
+        vw = min(w, int(h * self._RATIO))
+        vh = int(vw / self._RATIO)
+        self._video.setGeometry((w - vw) // 2, (h - vh) // 2, vw, vh)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Worker
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -119,11 +149,12 @@ class PreviewPanel(QGroupBox):
         outer.setContentsMargins(6, 6, 6, 6)
         outer.setSpacing(4)
 
-        # --- Video widget (hidden until first render) ---
+        # --- Video widget in 16:9 container (hidden until first render) ---
         self._video_widget = QVideoWidget()
-        self._video_widget.setMinimumHeight(120)
-        outer.addWidget(self._video_widget, stretch=1)
-        self._video_widget.hide()
+        self._video_container = _VideoContainer(self._video_widget)
+        self._video_container.setMinimumHeight(120)
+        outer.addWidget(self._video_container, stretch=1)
+        self._video_container.hide()
 
         # --- Placeholder label ---
         self._placeholder_label = QLabel("Load a song to generate a preview.")
@@ -253,7 +284,7 @@ class PreviewPanel(QGroupBox):
 
         # Switch to video widget
         self._placeholder_label.hide()
-        self._video_widget.show()
+        self._video_container.show()
 
         self._generate_btn.setEnabled(True)
         self._play_btn.setEnabled(True)

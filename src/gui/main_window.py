@@ -38,8 +38,12 @@ class MainWindow(QMainWindow):
         self._theme_dirty: bool = False
 
         self._update_title()
-        self.setMinimumSize(1280, 800)
-        self.resize(1440, 900)
+        screen = QApplication.primaryScreen().availableGeometry()
+        win_w = max(1400, min(1800, int(screen.width() * 0.90)))
+        win_h = max(900, min(1000, int(screen.height() * 0.90)))
+        self.setMinimumSize(1400, 900)
+        self.resize(win_w, win_h)
+        self._initial_win_w = win_w
 
         self._build_menu_bar()
 
@@ -99,7 +103,10 @@ class MainWindow(QMainWindow):
         # Connect theme changes to preview staleness tracking (both panels now exist)
         self._theme_editor.theme_changed.connect(self._preview.on_theme_changed)
 
-        outer.setSizes([250, 760, 270])
+        left_w = 250
+        right_w = 350
+        center_w = self._initial_win_w - left_w - right_w
+        outer.setSizes([left_w, center_w, right_w])
         outer.setChildrenCollapsible(False)
         return outer
 
