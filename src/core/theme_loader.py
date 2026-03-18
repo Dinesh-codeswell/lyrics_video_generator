@@ -34,6 +34,7 @@ DEFAULTS = {
     "logo_width": 400,              # px wide; height auto-scaled to maintain aspect ratio
     "logo_h_align": "center",       # "left", "center", "right"
     "title_h_align": "center",      # horizontal alignment for intro/outro title text
+    "interlude_dot_color": None,    # None = use active_text_color
 }
 
 
@@ -69,6 +70,7 @@ class Theme:
     logo_width: int = 400
     logo_h_align: str = "center"
     title_h_align: str = "center"
+    interlude_dot_color: str | None = None
 
     @property
     def effective_active_text_color(self) -> str:
@@ -109,7 +111,8 @@ def _validate_theme(data: dict, filepath) -> None:
         if val is not None and not _is_valid_hex_color(val):
             errors.append(f"'{key}': '{val}' is not a valid hex color (expected #RRGGBB)")
 
-    for key in ("active_text_color", "active_glow_color", "active_text_stroke_color"):
+    for key in ("active_text_color", "active_glow_color", "active_text_stroke_color",
+                "interlude_dot_color"):
         val = data.get(key)
         if val is not None and not _is_valid_hex_color(val):
             errors.append(f"'{key}': '{val}' is not a valid hex color (expected #RRGGBB)")
@@ -204,6 +207,7 @@ def load_theme(filepath: str | Path | None = None) -> Theme:
             logo_width=DEFAULTS["logo_width"],
             logo_h_align=DEFAULTS["logo_h_align"],
             title_h_align=DEFAULTS["title_h_align"],
+            interlude_dot_color=DEFAULTS["interlude_dot_color"],
         )
 
     filepath = Path(filepath)
@@ -255,4 +259,5 @@ def load_theme(filepath: str | Path | None = None) -> Theme:
         logo_width=int(merged.get("logo_width", 400)),
         logo_h_align=str(merged.get("logo_h_align", "center")),
         title_h_align=str(merged.get("title_h_align", "center")),
+        interlude_dot_color=merged.get("interlude_dot_color") or None,
     )

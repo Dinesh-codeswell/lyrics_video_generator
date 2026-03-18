@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QMessageBox,
     QPushButton,
     QScrollArea,
@@ -100,6 +101,8 @@ class _TimelineCanvas(QWidget):
     seek_requested        = pyqtSignal(float)              # time_s
     intro_marker_moved    = pyqtSignal(float)              # new_time_s (live during drag)
     outro_marker_moved    = pyqtSignal(float)              # new_time_s (live during drag)
+    gap_toggled           = pyqtSignal(int)                # marker index whose gap was toggled
+    gap_start_moved       = pyqtSignal(int, float)         # marker index, new gap start time_s
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -121,6 +124,9 @@ class _TimelineCanvas(QWidget):
         self._dragging_intro: bool = False
         self._outro_start_t: float | None = None
         self._dragging_outro: bool = False
+        self._gap_after_indices: set[int] = set()
+        self._gap_start_times: dict[int, float] = {}   # marker_idx → gap entry's time
+        self._dragging_gap_idx: int = -1               # gap start marker being dragged
 
         # Beat mode state
         self._beat_mode: bool = False
@@ -170,6 +176,11 @@ class _TimelineCanvas(QWidget):
         self._time_sig_num = time_sig_num
         self._beat_offset_s = offset_s
         self._snap_subdivision = snap_subdivision
+        self.update()
+
+    def set_gap_indices(self, indices: set[int], start_times: dict[int, float] | None = None) -> None:
+        self._gap_after_indices = set(indices)
+        self._gap_start_times = dict(start_times) if start_times else {}
         self.update()
 
     def _snap_time(self, t: float) -> float:
@@ -339,6 +350,50 @@ class _TimelineCanvas(QWidget):
                 color = QColor("#222222")
             p.fillRect(x1, RULER_H, x2 - x1, TRACK_H, color)
 
+        self._paint_gap_bands(p)
+
+    def _paint_gap_bands(self, p: QPainter) -> None:
+        """Draw semi-transparent interlude bands and draggable gap-start handles."""
+        if not self._gap_after_indices:
+            return
+        font = QFont()
+        font.setPointSize(8)
+        p.setFont(font)
+        band_color  = QColor(100, 160, 200, 60)
+        label_color = QColor(100, 160, 200, 200)
+        teal        = QColor("#40c0b0")
+        fm = QFontMetrics(font)
+        for i in sorted(self._gap_after_indices):
+            if i >= len(self._markers):
+                continue
+            gap_start_t = self._gap_start_times.get(i, self._markers[i].start_time)
+            gap_end_t = (
+                self._markers[i + 1].start_time
+                if i + 1 < len(self._markers)
+                else self._duration_s
+            )
+            x1 = self._time_to_x(gap_start_t)
+            x2 = self._time_to_x(gap_end_t)
+            p.fillRect(x1, RULER_H, x2 - x1, TRACK_H, band_color)
+            p.setPen(label_color)
+            p.drawText(x1 + 4, RULER_H + fm.ascent() + 6, "♫")
+
+            # Teal dashed line + upward triangle at gap start time (draggable)
+            pen = QPen(teal, 2)
+            pen.setStyle(Qt.PenStyle.DashLine)
+            p.setPen(pen)
+            p.drawLine(x1, RULER_H, x1, CANVAS_H)
+            h = 7
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(teal)
+            p.drawPolygon(QPolygon([
+                QPoint(x1,     RULER_H + h * 2),
+                QPoint(x1 - h, RULER_H),
+                QPoint(x1 + h, RULER_H),
+            ]))
+            p.setPen(teal)
+            p.drawText(x1 + 5, RULER_H + fm.ascent() + 6 + fm.height() + 2, "▶ interlude")
+
     def _paint_markers(self, p: QPainter) -> None:
         font = QFont()
         font.setPointSize(8)
@@ -484,6 +539,11 @@ class _TimelineCanvas(QWidget):
             if abs(x - self._time_to_x(self._intro_end_t)) <= HIT_RADIUS:
                 self._dragging_intro = True
                 return
+        for gap_idx in self._gap_after_indices:
+            gap_t = self._gap_start_times.get(gap_idx, None)
+            if gap_t is not None and abs(x - self._time_to_x(gap_t)) <= HIT_RADIUS:
+                self._dragging_gap_idx = gap_idx
+                return
         hit = self._find_marker_at(x)
         if hit >= 0:
             self._dragging = hit
@@ -514,6 +574,22 @@ class _TimelineCanvas(QWidget):
             self.intro_marker_moved.emit(new_t)
             self.update()
             return
+        if self._dragging_gap_idx >= 0:
+            x = event.position().x()
+            idx = self._dragging_gap_idx
+            min_t = self._markers[idx].start_time if idx < len(self._markers) else 0.0
+            max_t = (
+                self._markers[idx + 1].start_time
+                if idx + 1 < len(self._markers)
+                else self._duration_s
+            )
+            new_t = max(min_t, min(max_t, self._x_to_time(x)))
+            if self._snap:
+                new_t = self._snap_time(new_t)
+            self._gap_start_times[idx] = new_t
+            self.gap_start_moved.emit(idx, new_t)
+            self.update()
+            return
         if self._dragging < 0:
             return
         x = event.position().x() - self._drag_offset_px
@@ -541,6 +617,9 @@ class _TimelineCanvas(QWidget):
         if self._dragging_intro:
             self._dragging_intro = False
             return
+        if self._dragging_gap_idx >= 0:
+            self._dragging_gap_idx = -1
+            return
         if self._dragging >= 0:
             new_t = self._markers[self._dragging].start_time
             if abs(new_t - self._drag_start_time) > 1e-9:
@@ -548,6 +627,27 @@ class _TimelineCanvas(QWidget):
                     self._dragging, self._drag_start_time, new_t
                 )
             self._dragging = -1
+
+    def contextMenuEvent(self, event) -> None:  # noqa: N802
+        x = event.pos().x()
+        hit = self._find_marker_at(x)
+        if hit < 0:
+            return
+        menu = QMenu(self)
+        if hit in self._gap_after_indices:
+            act = menu.addAction("Remove interlude gap after this line")
+        else:
+            act = menu.addAction("Insert interlude gap after this line")
+        chosen = menu.exec(event.globalPos())
+        if chosen == act:
+            if hit in self._gap_after_indices:
+                self._gap_after_indices.discard(hit)
+                self._gap_start_times.pop(hit, None)
+            else:
+                self._gap_after_indices.add(hit)
+                self._gap_start_times[hit] = self._markers[hit].start_time
+            self.gap_toggled.emit(hit)
+            self.update()
 
     def _find_marker_at(self, x: float) -> int:
         best, best_d = -1, HIT_RADIUS + 1
@@ -867,6 +967,7 @@ class TimelineEditorPanel(QGroupBox):
         self._intro_end_t:  float | None = None
         self._outro_start_t: float | None = None
         self._gap_after_indices: set[int] = set()
+        self._gap_start_times: dict[int, float] = {}
         self._zoom         = 1.0           # multiplier on BASE_PX_PER_SEC
         self._stamp_cursor = 0             # next marker index to stamp via Enter
 
@@ -915,8 +1016,10 @@ class TimelineEditorPanel(QGroupBox):
         _beat_off   = data.get("beat_offset_s") or 0.0
 
         # Record which lyric-line indices are followed by a mid-array gap entry,
-        # so they survive the round-trip through save_lyrics().
+        # and the gap entry's own time (when dots appear), so both survive the
+        # round-trip through save_lyrics().
         self._gap_after_indices = set()
+        self._gap_start_times = {}
         try:
             raw_json = json.loads(Path(lyrics_path).read_text(encoding="utf-8"))
             lyric_idx = -1
@@ -924,11 +1027,13 @@ class TimelineEditorPanel(QGroupBox):
                 if entry.get("text") == "":
                     if lyric_idx >= 0:
                         self._gap_after_indices.add(lyric_idx)
+                        self._gap_start_times[lyric_idx] = float(entry["time"])
                 else:
                     lyric_idx += 1
             # The final empty entry is the end marker; remove it from the set
             # (it's always re-appended explicitly by _write_lyrics).
             self._gap_after_indices.discard(lyric_idx)
+            self._gap_start_times.pop(lyric_idx, None)
         except Exception:
             pass  # Non-fatal; gaps simply won't be preserved
 
@@ -938,6 +1043,7 @@ class TimelineEditorPanel(QGroupBox):
 
         self._title_edit.setText(self._title)
         self._canvas.load(self._markers, self._duration_s)
+        self._canvas.set_gap_indices(self._gap_after_indices, self._gap_start_times)
         self._canvas.set_intro_marker(self._intro_end_t)
         self._clear_intro_btn.setEnabled(self._intro_end_t is not None)
         self._canvas.set_outro_marker(self._outro_start_t)
@@ -981,6 +1087,8 @@ class TimelineEditorPanel(QGroupBox):
         self._canvas.seek_requested.connect(self._on_seek_requested)
         self._canvas.intro_marker_moved.connect(self._on_intro_marker_moved)
         self._canvas.outro_marker_moved.connect(self._on_outro_marker_moved)
+        self._canvas.gap_toggled.connect(self._on_gap_toggled)
+        self._canvas.gap_start_moved.connect(self._on_gap_start_moved)
 
         layout.addLayout(self._build_toolbar())
 
@@ -1335,6 +1443,16 @@ class TimelineEditorPanel(QGroupBox):
         self._outro_start_t = t
         self._set_extras_dirty()
 
+    def _on_gap_toggled(self, _idx: int) -> None:
+        # Canvas already updated its own sets; mirror both back to panel.
+        self._gap_after_indices = set(self._canvas._gap_after_indices)
+        self._gap_start_times = dict(self._canvas._gap_start_times)
+        self._set_extras_dirty()
+
+    def _on_gap_start_moved(self, idx: int, t: float) -> None:
+        self._gap_start_times[idx] = t
+        self._set_extras_dirty()
+
     # ── beat mode handlers ────────────────────────────────────────────────────
 
     def _on_beat_mode_toggled(self, enabled: bool) -> None:
@@ -1410,7 +1528,8 @@ class TimelineEditorPanel(QGroupBox):
         for i, m in enumerate(self._markers):
             raw_lyrics.append({"time": round(m.start_time, 3), "text": m.text})
             if i in self._gap_after_indices:
-                raw_lyrics.append({"time": round(m.start_time, 3), "text": ""})
+                gap_t = self._gap_start_times.get(i, m.start_time)
+                raw_lyrics.append({"time": round(gap_t, 3), "text": ""})
         # End marker: use audio duration when known, else preserved original
         end_t = self._duration_s if self._duration_s > 0 else self._end_marker_t
         raw_lyrics.append({"time": round(end_t, 3), "text": ""})

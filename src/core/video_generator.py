@@ -107,6 +107,7 @@ def generate_video(
     renderer = TextRenderer(theme_obj)
 
     lines = lyrics_data["lines"]
+    gap_periods = lyrics_data.get("gap_periods", [])
     intro_end_time = lyrics_data.get("intro_end_time")
     outro_start_time = lyrics_data.get("outro_start_time")
     total_duration = audio.duration
@@ -147,6 +148,7 @@ def generate_video(
             if outro_start_time is not None else None
         ),
         outro_start_time=outro_start_time,
+        gap_periods=gap_periods,
     )
 
     total_frames = max(int(total_duration * fps), 1)

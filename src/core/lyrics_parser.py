@@ -14,6 +14,13 @@ class LyricLine:
     duration: float
 
 
+@dataclass
+class GapPeriod:
+    """A silent interlude period between lyric lines."""
+    start_time: float
+    end_time: float
+
+
 def parse_lyrics(filepath: str | Path) -> dict:
     """Load and parse a lyrics JSON file.
 
@@ -40,7 +47,7 @@ def parse_lyrics(filepath: str | Path) -> dict:
     _validate_structure(data, filepath)
 
     raw_lyrics = data["lyrics"]
-    lines = _build_lyric_lines(raw_lyrics)
+    lines, gap_periods = _build_lyric_lines(raw_lyrics)
 
     return {
         "title": data["title"],
@@ -51,6 +58,7 @@ def parse_lyrics(filepath: str | Path) -> dict:
         "time_sig_num": data.get("time_sig_num"),        # int | None
         "beat_offset_s": data.get("beat_offset_s"),      # float | None
         "lines": lines,
+        "gap_periods": gap_periods,
     }
 
 
@@ -80,13 +88,26 @@ def _validate_structure(data: dict, filepath: Path) -> None:
             raise ValueError(f"Lyric entry {i} 'text' must be a string in {filepath}")
 
 
-def _build_lyric_lines(raw_lyrics: list[dict]) -> list[LyricLine]:
-    """Convert raw lyric entries into LyricLine objects with computed durations."""
-    lines = []
+def _build_lyric_lines(raw_lyrics: list[dict]) -> tuple[list[LyricLine], list[GapPeriod]]:
+    """Convert raw lyric entries into LyricLine objects with computed durations.
+
+    Also extracts mid-array empty entries as GapPeriod objects representing
+    instrumental interludes. The trailing empty end marker is not treated as a gap.
+    """
+    lines: list[LyricLine] = []
+    gap_periods: list[GapPeriod] = []
 
     for i, entry in enumerate(raw_lyrics):
-        # Skip the end marker (final empty text entry)
         if entry["text"] == "":
+            # Look ahead for the next non-empty entry to determine gap end time.
+            next_t = None
+            for j in range(i + 1, len(raw_lyrics)):
+                if raw_lyrics[j]["text"] != "":
+                    next_t = raw_lyrics[j]["time"]
+                    break
+            if next_t is not None:
+                # Mid-array gap (interlude)
+                gap_periods.append(GapPeriod(start_time=entry["time"], end_time=next_t))
             continue
 
         start_time = entry["time"]
@@ -107,4 +128,4 @@ def _build_lyric_lines(raw_lyrics: list[dict]) -> list[LyricLine]:
             duration=duration,
         ))
 
-    return lines
+    return lines, gap_periods

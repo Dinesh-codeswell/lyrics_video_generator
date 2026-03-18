@@ -1,5 +1,7 @@
 """Text and font rendering with Pillow."""
 
+import math
+
 from PIL import Image, ImageDraw, ImageFont
 
 from src.core.theme_loader import Theme
@@ -265,6 +267,52 @@ class TextRenderer:
             img = Image.alpha_composite(img, txt_layer)
 
         return img
+
+    def draw_interlude_dots(self, img: Image.Image, t: float, alpha: float) -> Image.Image:
+        """Composite three animated bouncing dots onto img for an interlude period.
+
+        The dots are aligned with the theme's lyric_position and vertically
+        centered on screen.  Each dot bounces with a 120° phase offset, giving
+        the classic streaming-service music indicator look.
+
+        Args:
+            img: The current frame as a PIL RGBA Image.
+            t: Current video time in seconds (drives the bounce animation).
+            alpha: Overall opacity (0.0 – 1.0), used for fade-in/out.
+
+        Returns:
+            The composited PIL RGBA Image.
+        """
+        dot_layer = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(dot_layer)
+
+        n_dots = 3
+        dot_r = 10
+        spacing = 50
+        freq = 1.5   # Hz
+        amp = 12     # px
+
+        cy = HEIGHT // 2
+        a = int(alpha * 255)
+        color_hex = self.theme.interlude_dot_color or self.theme.effective_active_text_color
+        color = self._hex_to_rgba(color_hex, a)
+
+        pos = self.theme.lyric_position
+        total_span = (n_dots - 1) * spacing
+        if pos == "left":
+            start_x = COLUMN_PADDING
+        elif pos == "right":
+            start_x = WIDTH - COLUMN_PADDING - total_span
+        else:  # center
+            start_x = WIDTH // 2 - total_span // 2
+
+        for k in range(n_dots):
+            phase = k * (2 * math.pi / n_dots)
+            x = start_x + k * spacing
+            y = cy + amp * math.sin(2 * math.pi * freq * t + phase)
+            draw.ellipse([x - dot_r, y - dot_r, x + dot_r, y + dot_r], fill=color)
+
+        return Image.alpha_composite(img.convert("RGBA"), dot_layer)
 
     def _render_highlighted_tokens(
         self,

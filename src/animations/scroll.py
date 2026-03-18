@@ -50,7 +50,8 @@ class ScrollingAnimation:
                  intro_lines: list[str] | None = None,
                  intro_end_time: float | None = None,
                  outro_lines: list[str] | None = None,
-                 outro_start_time: float | None = None):
+                 outro_start_time: float | None = None,
+                 gap_periods=None):
         self.lines = lines
         self.fps = fps
         self.line_height = line_height
@@ -63,11 +64,32 @@ class ScrollingAnimation:
         # Title card outro support
         self._outro_lines: list[str] = outro_lines or []
         self._outro_start_time: float | None = outro_start_time
+        # Interlude gap periods
+        self._gap_periods = gap_periods or []
+        # Virtual y positions: each gap inserts an extra line_height slot so
+        # the gap occupies its own position between pre- and post-gap lyrics.
+        self._virt_y: list[float] = self._compute_virt_y()
         self._transitions = self._compute_transitions()
 
     # ------------------------------------------------------------------
     # Pre-computation
     # ------------------------------------------------------------------
+
+    def _compute_virt_y(self) -> list[float]:
+        """Virtual y position for each lyric line.
+
+        For songs with no gaps this equals i * line_height as before.
+        Each gap period before a line adds one extra line_height slot so
+        the gap occupies its own row in virtual space.
+        """
+        virt = []
+        for i, line in enumerate(self.lines):
+            gaps_before = sum(
+                1 for gap in self._gap_periods
+                if gap.end_time <= line.start_time
+            )
+            virt.append((i + gaps_before) * self.line_height)
+        return virt
 
     def _compute_transitions(self) -> list[tuple[float, float, int, int]]:
         """Build (t_start, t_end, from_idx, to_idx) for each line change.
@@ -99,7 +121,13 @@ class ScrollingAnimation:
     # ------------------------------------------------------------------
 
     def _find_active_idx(self, t: float) -> int:
-        """Return index of the currently sung line, or last sung line."""
+        """Return index of the currently sung line, or last sung line.
+
+        Returns -1 during gap (interlude) periods — no line is active.
+        """
+        for gap in self._gap_periods:
+            if gap.start_time <= t < gap.end_time:
+                return -1
         last_idx = -1
         for i, line in enumerate(self.lines):
             if line.start_time <= t:
@@ -113,21 +141,23 @@ class ScrollingAnimation:
         for t_start, t_end, from_idx, to_idx in self._transitions:
             if t_start <= t <= t_end:
                 if t_end == t_start:
-                    return to_idx * self.line_height
+                    return self._virt_y[to_idx]
                 raw = (t - t_start) / (t_end - t_start)
                 eased = raw * raw * (3.0 - 2.0 * raw)
-                return from_idx * self.line_height + eased * self.line_height
+                from_pos = self._virt_y[from_idx]
+                to_pos   = self._virt_y[to_idx]
+                return from_pos + eased * (to_pos - from_pos)
 
         # No active transition — rest at the most recently reached position.
         for t_start, t_end, from_idx, to_idx in reversed(self._transitions):
             if t >= t_end:
-                return to_idx * self.line_height
+                return self._virt_y[to_idx]
 
         # Before any transition has started (early in the song).
         active_idx = self._find_active_idx(t)
         if active_idx < 0:
             return 0.0
-        return active_idx * self.line_height
+        return self._virt_y[active_idx]
 
     def _compute_scroll_pos(self, t: float) -> float:
         """Virtual y coordinate that should be centered on screen at time t."""
@@ -158,7 +188,7 @@ class ScrollingAnimation:
 
         # Outro phase: transition to static card below the lyric space.
         if self._outro_lines and self._outro_start_time is not None and t >= self._outro_start_time:
-            outro_static_pos = (len(self.lines) - 1 + self._max_visible_dist) * self.line_height
+            outro_static_pos = self._virt_y[-1] + self._max_visible_dist * self.line_height
             outro_end_t = self._outro_start_time + INTRO_SCROLL_SECONDS
             if t >= outro_end_t:
                 return outro_static_pos
@@ -166,6 +196,47 @@ class ScrollingAnimation:
             raw = (t - self._outro_start_time) / INTRO_SCROLL_SECONDS
             eased = raw * raw * (3.0 - 2.0 * raw)
             return from_pos + eased * (outro_static_pos - from_pos)
+
+        # Gap (interlude) periods: scroll view to the "gap slot" between the
+        # pre-gap and post-gap lyric so dots appear at centre with context lines
+        # visible above and below at normal inactive alpha.
+        for gap in self._gap_periods:
+            if not (gap.start_time <= t < gap.end_time):
+                continue
+
+            # Last lyric line before this gap.
+            last_idx = -1
+            for i, line in enumerate(self.lines):
+                if line.start_time <= gap.start_time:
+                    last_idx = i
+            if last_idx < 0:
+                break
+
+            gap_dur = gap.end_time - gap.start_time
+            base_pos   = self._virt_y[last_idx]
+            gap_center = self._virt_y[last_idx] + self.line_height   # gap slot: one full line below pre-gap
+            next_pos   = self._virt_y[last_idx + 1] if last_idx + 1 < len(self._virt_y) else gap_center
+
+            enter_dur = min(SCROLL_LEAD_SECONDS, gap_dur * 0.20)
+            exit_dur  = min(SCROLL_LEAD_SECONDS, gap_dur * 0.30)
+            t_enter_end = gap.start_time + enter_dur
+            t_exit_start = gap.end_time - exit_dur
+
+            if t <= t_enter_end:
+                if enter_dur <= 0:
+                    return gap_center
+                raw = (t - gap.start_time) / enter_dur
+                eased = raw * raw * (3.0 - 2.0 * raw)
+                return base_pos + eased * (gap_center - base_pos)
+
+            if t >= t_exit_start:
+                if exit_dur <= 0:
+                    return next_pos
+                raw = (t - t_exit_start) / exit_dur
+                eased = raw * raw * (3.0 - 2.0 * raw)
+                return gap_center + eased * (next_pos - gap_center)
+
+            return gap_center
 
         return self._compute_lyric_scroll_pos(t)
 
@@ -226,7 +297,7 @@ class ScrollingAnimation:
         # (last outro line) centers at outro_static_pos.
         if self._outro_lines and self._outro_start_time is not None and t >= self._outro_start_time:
             n_outro = len(self._outro_lines)
-            outro_static_pos = (len(self.lines) - 1 + max_dist) * self.line_height
+            outro_static_pos = self._virt_y[-1] + max_dist * self.line_height
             is_static = t >= self._outro_start_time + INTRO_SCROLL_SECONDS
             for idx, text in enumerate(self._outro_lines):
                 # title (last, idx=n_outro-1) at outro_static_pos;
@@ -251,7 +322,7 @@ class ScrollingAnimation:
 
         # Lyric lines
         for i, line in enumerate(self.lines):
-            screen_y = (i * self.line_height) - scroll_pos + center_y
+            screen_y = self._virt_y[i] - scroll_pos + center_y
             if screen_y < -self.line_height or screen_y > HEIGHT + self.line_height:
                 continue
 
@@ -268,6 +339,29 @@ class ScrollingAnimation:
 
         return visible
 
+    def _get_gap_alpha(self, t: float) -> float:
+        """Return opacity (0.0–1.0) for the interlude dot indicator at time t.
+
+        Fades in over FADE_S at the start of a gap, holds at 1.0, then fades
+        out over FADE_S at the end.  Returns 0.0 when not in any gap period.
+        """
+        FADE_S = 0.5
+        for gap in self._gap_periods:
+            if gap.start_time <= t <= gap.end_time:
+                dur = gap.end_time - gap.start_time
+                if dur <= 0:
+                    return 0.0
+                elapsed = t - gap.start_time
+                remaining = gap.end_time - t
+                if dur <= FADE_S * 2:
+                    return 1.0
+                if elapsed < FADE_S:
+                    return elapsed / FADE_S
+                if remaining < FADE_S:
+                    return remaining / FADE_S
+                return 1.0
+        return 0.0
+
     def make_frame(self, t: float, renderer, background=None) -> np.ndarray:
         """Return a HxWx3 uint8 numpy array for time t."""
         active_idx = self._find_active_idx(t)
@@ -279,6 +373,8 @@ class ScrollingAnimation:
             if active_line.duration > 0:
                 raw = (t - active_line.start_time) / active_line.duration
                 highlight_progress = max(0.0, min(1.0, raw))
+
+        gap_alpha = self._get_gap_alpha(t)
 
         lines_data = [
             {
@@ -292,4 +388,8 @@ class ScrollingAnimation:
             for li in self.get_visible_lines(t)
         ]
         img = renderer.render_scroll_frame(lines_data, background=background)
+
+        if gap_alpha > 0:
+            img = renderer.draw_interlude_dots(img, t, gap_alpha)
+
         return np.array(img.convert("RGB"), dtype=np.uint8)
