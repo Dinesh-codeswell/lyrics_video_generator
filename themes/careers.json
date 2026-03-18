@@ -17,7 +17,7 @@
   "lyric_position": "right",
   "active_font_family": null,
   "active_text_stroke_color": "#6A1E22",
-  "active_text_stroke_width": 3,
+  "active_text_stroke_width": 0,
   "highlight_mode": "line",
   "highlight_dim_alpha": 0.3,
   "text_overlay_opacity": 0,
@@ -32,5 +32,7 @@
   "column_width": 1916,
   "logo_path": "/Users/curtiswilliams/Library/Mobile Documents/com~apple~CloudDocs/the Durt Nurs' Den of Inequity/WEBMASTER/logos/Logo_Design/Version 3.0/logo-512-white.png",
   "logo_width": 400,
-  "logo_h_align": "center"
+  "logo_h_align": "center",
+  "title_h_align": "center",
+  "interlude_dot_color": null
 }
