@@ -1,0 +1,63 @@
+# Build and publish a macOS .dmg release whenever a version tag is pushed.
+#
+# Trigger:
+#   git tag v1.0.0
+#   git push --tags
+#
+# Prerequisites (set in repo Settings → Secrets and variables → Actions):
+#   None required for unsigned builds.
+#   For notarized builds: APPLE_CERT, APPLE_CERT_PASSWORD, APPLE_ID,
+#   APPLE_ID_PASSWORD, APPLE_TEAM_ID  (see docs/signing.md when ready)
+#
+# The produced .dmg is attached to the GitHub Release automatically.
+
+name: Build macOS Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pyinstaller
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Build .app with PyInstaller
+        run: pyinstaller build.spec
+
+      - name: Create .dmg
+        run: |
+          create-dmg \
+            --volname "Lyric Video Generator" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 128 \
+            --icon "Lyric Video Generator.app" 150 185 \
+            --hide-extension "Lyric Video Generator.app" \
+            --app-drop-link 450 185 \
+            "LyricVideoGenerator-${{ github.ref_name }}.dmg" \
+            "dist/Lyric Video Generator.app"
+
+      - name: Create GitHub Release and upload .dmg
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "LyricVideoGenerator-${{ github.ref_name }}.dmg"
+          generate_release_notes: true

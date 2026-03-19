@@ -7,6 +7,14 @@ dist/
 build/
 *.egg
 
+# PyInstaller
+*.spec.bak
+*.dmg
+
+# App assets (icon provided locally, not tracked)
+assets/*.icns
+assets/*.png
+
 # Virtual environments
 venv/
 .venv/
