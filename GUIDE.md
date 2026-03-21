@@ -6,6 +6,12 @@
 
 ## Launching the App
 
+**macOS app (downloaded release):**
+
+Double-click **LV-Gen** in your Applications folder. On first launch, right-click → **Open** if macOS blocks it.
+
+**From source:**
+
 ```bash
 # Activate the virtual environment (required each new terminal session)
 source venv/bin/activate
@@ -213,7 +219,7 @@ Controls the visual style of the video. Changes are reflected in the Preview pan
 - **⌘⇧S** saves the currently loaded theme file
 - **File → Save Theme** is the menu equivalent
 - **File → Open Theme…** loads a theme JSON from `themes/`
-- Theme files live in `themes/` — copy `themes/durt_nurs.json` as a starting point
+- Theme files live in `themes/` — copy `themes/default.json` as a starting point
 
 ---
 
@@ -246,7 +252,7 @@ Controls the visual style of the video. Changes are reflected in the Preview pan
 
 ```bash
 # Auto-match by song name
-lyric-video --song disciples-of-dysfunction
+lyric-video --song my-song
 
 # Explicit file paths
 lyric-video --lyrics input/lyrics/my-song.json --audio input/audio/my-song.mp3

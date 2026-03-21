@@ -6,7 +6,20 @@
 
 Generate lyric videos with timed text animations from a JSON lyrics file and an audio track. Outputs YouTube-ready 1080p MP4 videos (H.264 video, AAC audio).
 
-## Requirements
+## Download (macOS)
+
+Pre-built `.dmg` releases are attached to each [GitHub Release](https://github.com/CuWilliams/lyric-video-generator/releases).
+
+1. Download the latest `LV-Gen-vX.X.X.dmg`
+2. Open the `.dmg` and drag **LV-Gen** to your Applications folder
+3. Install FFmpeg if you haven't already: `brew install ffmpeg`
+4. On first launch, macOS may block the app — right-click → **Open** to bypass the Gatekeeper warning
+
+> The app bundles all Python dependencies. Only FFmpeg needs to be installed separately.
+
+---
+
+## Requirements (source install)
 
 - Python 3.10+
 - FFmpeg (required by moviepy for video encoding)
@@ -232,6 +245,27 @@ Themes are JSON files that control the visual style. The included `themes/defaul
 | `text_shadow` | Enable a drop shadow on all text | `false` |
 | `text_shadow_color` | Hex color of the shadow | `#000000` |
 | `text_shadow_offset` | Shadow offset as `[x, y]` pixels | `[3, 3]` |
+
+## Publishing a Release
+
+Releases are built automatically via GitHub Actions when a version tag is pushed:
+
+```bash
+git tag v1.0.0
+git push --tags
+```
+
+This triggers [build-release.yml](.github/workflows/build-release.yml), which builds `LV-Gen.app` with PyInstaller, wraps it in a `.dmg`, and attaches it to a GitHub Release.
+
+To build locally instead:
+
+```bash
+pip install pyinstaller
+pyinstaller build.spec
+# Output: dist/LV-Gen.app
+```
+
+> `assets/icon.icns` must exist before building. See [build.spec](build.spec) for details.
 
 ## Project Structure
 
