@@ -46,18 +46,18 @@ jobs:
       - name: Create .dmg
         run: |
           create-dmg \
-            --volname "Lyric Video Generator" \
+            --volname "LV-Gen" \
             --window-pos 200 120 \
             --window-size 600 400 \
             --icon-size 128 \
-            --icon "Lyric Video Generator.app" 150 185 \
-            --hide-extension "Lyric Video Generator.app" \
+            --icon "LV-Gen.app" 150 185 \
+            --hide-extension "LV-Gen.app" \
             --app-drop-link 450 185 \
-            "LyricVideoGenerator-${{ github.ref_name }}.dmg" \
-            "dist/Lyric Video Generator.app"
+            "LV-Gen-${{ github.ref_name }}.dmg" \
+            "dist/LV-Gen.app"
 
       - name: Create GitHub Release and upload .dmg
         uses: softprops/action-gh-release@v2
         with:
-          files: "LyricVideoGenerator-${{ github.ref_name }}.dmg"
+          files: "LV-Gen-${{ github.ref_name }}.dmg"
           generate_release_notes: true

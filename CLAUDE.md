@@ -65,3 +65,10 @@ No test suite or linting is currently configured.
 - Preview mode renders first 30 seconds only.
 - Input directories are `input/audio/`, `input/lyrics/`, `input/backgrounds/` (contents gitignored, structure kept via `.gitkeep`).
 - Output directory is `output/` (gitignored).
+
+## Related Project
+
+**Website (durtnurs.github.io):** `/Users/curtiswilliams/Projects_Local_Repo/durtnurs.github.io`
+
+This tool will be distributed via a download page on the band website. When working across 
+both repos, reference website files by absolute path. The website repo has its own CLAUDE.md.

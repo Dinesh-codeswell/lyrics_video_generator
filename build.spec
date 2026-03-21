@@ -59,7 +59,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="Lyric Video Generator",
+    name="LV-Gen",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -79,14 +79,14 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="Lyric Video Generator",
+    name="LV-Gen",
 )
 
 app = BUNDLE(
     coll,
-    name="Lyric Video Generator.app",
+    name="LV-Gen.app",
     icon="assets/icon.icns",    # Place your icon here before building
-    bundle_identifier="com.durtnurs.lyric-video-generator",
+    bundle_identifier="com.durtnurs.lv-gen",
     info_plist={
         "NSHighResolutionCapable": True,
         "NSRequiresAquaSystemAppearance": False,  # Allows dark mode
