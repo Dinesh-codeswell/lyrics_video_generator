@@ -44,8 +44,17 @@ a = Analysis(
     ],
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
+    runtime_hooks=["hooks/rthook_macos_nsbundle.py"],
+    excludes=[
+        # These Qt plugins crash on macOS when bundled by PyInstaller —
+        # they call CFBundleCopyBundleURL during init which fails in the
+        # PyInstaller app context (qdarwinpermissionplugin SIGSEGV)
+        "PyQt6.QtLocation",
+        "PyQt6.QtPositioning",
+        "PyQt6.QtSensors",
+        "PyQt6.QtWebEngineCore",
+        "PyQt6.QtWebEngineWidgets",
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -90,6 +99,7 @@ app = BUNDLE(
     info_plist={
         "NSHighResolutionCapable": True,
         "NSRequiresAquaSystemAppearance": False,  # Allows dark mode
+        "NSPrincipalClass": "NSApplication",      # Ensures CFBundleGetMainBundle() is valid at Qt init
         "CFBundleShortVersionString": "1.0.0",
         "CFBundleVersion": "1",
         "LSMinimumSystemVersion": "11.0",         # macOS Big Sur+
