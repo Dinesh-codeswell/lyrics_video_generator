@@ -21,6 +21,8 @@ on:
 jobs:
   build-macos:
     runs-on: macos-latest
+    permissions:
+      contents: write  # required to create GitHub Releases and upload assets
 
     steps:
       - name: Checkout
