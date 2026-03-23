@@ -260,12 +260,15 @@ This triggers [build-release.yml](.github/workflows/build-release.yml), which bu
 To build locally instead:
 
 ```bash
-pip install pyinstaller
-pyinstaller build.spec
-# Output: dist/LV-Gen.app
+source venv/bin/activate
+pip install py2app
+bash scripts/build_and_sign.sh
+# Output: /Applications/LV-Gen.app (built, signed, and installed)
 ```
 
-> `assets/icon.icns` must exist before building. See [build.spec](build.spec) for details.
+`build_and_sign.sh` handles the full pipeline: py2app bundle, post-processing, code signing with your Developer ID, and installation to `/Applications/`. Run it for every local build.
+
+> `assets/icon.icns` must exist before building. Your Developer ID Application certificate must be in Keychain. See [entitlements.plist](entitlements.plist) and [setup_py2app.py](setup_py2app.py) for details.
 
 ## Project Structure
 
