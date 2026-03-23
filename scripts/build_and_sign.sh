@@ -7,12 +7,13 @@
 # Requires:
 #   - venv active (source venv/bin/activate)
 #   - Developer ID Application certificate in Keychain
-#   - CERT variable set below (or as env var SIGN_CERT)
+#   - SIGN_CERT env var set to your Developer ID certificate hash
+#     e.g. export SIGN_CERT="$(security find-identity -v -p codesigning | grep 'Developer ID' | awk '{print $2}')"
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CERT="${SIGN_CERT:-1F07F33DDB7424392D037E1C5D7BFE1B1B2F465C}"
+CERT="${SIGN_CERT:?Error: SIGN_CERT env var not set. Export your Developer ID certificate hash before running.}"
 ENT="$REPO_ROOT/entitlements.plist"
 DIST="$REPO_ROOT/dist/LV-Gen.app"
 INSTALL="/Applications/LV-Gen.app"

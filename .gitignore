@@ -23,6 +23,9 @@ env/
 .vscode/
 .idea/
 
+# Claude Code local session files (contain personal paths and permissions)
+.claude/
+
 # Output
 output/
 
