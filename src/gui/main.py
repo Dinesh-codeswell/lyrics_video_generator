@@ -2,6 +2,32 @@
 
 import sys
 
+# On macOS, QtCore.abi3.so contains a C++ static initializer that calls
+# CFBundleGetMainBundle() the moment the library is dlopen'd. On macOS 26+,
+# if that call returns NULL (which happens before NSApplication is set up in
+# a py2app bundle launched via Finder/launchd), CoreFoundation's PAC
+# signature check crashes with SIGSEGV.
+# Calling [NSApplication sharedApplication] here registers the main bundle
+# before any Qt module is imported. NSApplicationLoad() is deprecated macOS
+# 12+ and is a no-op on macOS 26; this approach works on all versions.
+if sys.platform == "darwin":
+    try:
+        import ctypes
+        import ctypes.util
+        _libobjc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))
+        _libobjc.objc_getClass.restype = ctypes.c_void_p
+        _libobjc.objc_getClass.argtypes = [ctypes.c_char_p]
+        _libobjc.sel_registerName.restype = ctypes.c_void_p
+        _libobjc.sel_registerName.argtypes = [ctypes.c_char_p]
+        _libobjc.objc_msgSend.restype = ctypes.c_void_p
+        _libobjc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        ctypes.cdll.LoadLibrary(ctypes.util.find_library("AppKit"))
+        _NSApplication = _libobjc.objc_getClass(b"NSApplication")
+        _sel = _libobjc.sel_registerName(b"sharedApplication")
+        _libobjc.objc_msgSend(_NSApplication, _sel)
+    except Exception:
+        pass
+
 from PyQt6.QtWidgets import QApplication
 
 from src.gui.main_window import MainWindow

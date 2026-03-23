@@ -15,7 +15,16 @@ if sys.platform == "darwin":
     try:
         import ctypes
         import ctypes.util
-        _appkit = ctypes.cdll.LoadLibrary(ctypes.util.find_library("AppKit"))
-        _appkit.NSApplicationLoad()
+        _libobjc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))
+        _libobjc.objc_getClass.restype = ctypes.c_void_p
+        _libobjc.objc_getClass.argtypes = [ctypes.c_char_p]
+        _libobjc.sel_registerName.restype = ctypes.c_void_p
+        _libobjc.sel_registerName.argtypes = [ctypes.c_char_p]
+        _libobjc.objc_msgSend.restype = ctypes.c_void_p
+        _libobjc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        ctypes.cdll.LoadLibrary(ctypes.util.find_library("AppKit"))
+        _NSApplication = _libobjc.objc_getClass(b"NSApplication")
+        _sel = _libobjc.sel_registerName(b"sharedApplication")
+        _libobjc.objc_msgSend(_NSApplication, _sel)
     except Exception:
         pass
