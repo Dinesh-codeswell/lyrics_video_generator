@@ -13,6 +13,7 @@
 import sys
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
+from PyInstaller.utils.hooks import copy_metadata
 
 block_cipher = None
 
@@ -29,6 +30,9 @@ datas = [
     ("input/lyrics/.gitkeep",     "input/lyrics"),
     ("input/backgrounds/.gitkeep","input/backgrounds"),
 ]
+# Package metadata required by imageio (calls importlib.metadata.version at import time)
+datas += copy_metadata('imageio')
+datas += copy_metadata('imageio-ffmpeg')
 
 a = Analysis(
     ["src/gui/main.py"],
