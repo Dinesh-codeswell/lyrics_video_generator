@@ -4,14 +4,15 @@ All notable changes to LV-Gen are documented here.
 
 ---
 
-## [0.1.1] — Unreleased
+## [0.1.1] — 2026-03-24
 
 ### Added
 - Import Song dialog — create a new song's lyrics file directly from pasted text without leaving the app
 - Title bar icon on macOS
 - User manual (`docs/MANUAL.md`) with 15 sections covering installation, all GUI panels, tap-to-stamp workflow, theme editor, CLI reference, keyboard shortcuts, and troubleshooting
-- Headless screenshot generator (`scripts/take_screenshots.py`) using `QT_QPA_PLATFORM=offscreen`
+- Headless screenshot generator (`scripts/take_screenshots.py`) using `QT_QPA_PLATFORM=offscreen` — all GUI panel screenshots committed to `docs/screenshots/`
 - Automated HTML manual build in the release workflow — `LV-Gen-Manual-vX.X.X.html` now attached to each GitHub Release alongside the `.dmg`
+- Code signing and notarization — releases are now signed with a Developer ID certificate and notarized by Apple; no Gatekeeper warning on launch
 - New-user onboarding improvements
 
 ### Changed
@@ -20,6 +21,7 @@ All notable changes to LV-Gen are documented here.
 
 ### Fixed
 - Version mismatch between `pyproject.toml`, `build.spec`, and `setup_py2app.py`
+- App crash on launch due to missing `imageio` package metadata in PyInstaller bundle (`importlib.metadata.version()` now resolved via `copy_metadata`)
 
 ---
 

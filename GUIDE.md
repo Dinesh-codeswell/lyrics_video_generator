@@ -83,6 +83,15 @@ The window has five panels:
 - **Click a song to load it** into all panels
 - If you have unsaved lyric changes, a dialog prompts to Save / Discard / Cancel before loading
 
+### Import Song Dialog
+
+**File → Import Song** (or the Import button in the Song Selector) opens the Import Song dialog, which lets you create a new song's lyrics file without leaving the app:
+
+1. Paste raw lyric text into the text area (one line per entry)
+2. Enter the song title and artist name
+3. Click **Import** — the `.json` lyrics file is written to `input/lyrics/` with all timestamps set to `0`
+4. The new song appears in the Song Selector and is ready for timestamping in the Timeline Editor
+
 ---
 
 ## Timeline Editor
