@@ -61,7 +61,9 @@ jobs:
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          printf '%s' "$APPLE_CERT" | openssl base64 -d -A > "$RUNNER_TEMP/cert.p12"
+          python3 -c "import base64,os,sys; sys.stdout.buffer.write(base64.b64decode(os.environ['APPLE_CERT']))" > "$RUNNER_TEMP/cert.p12"
+          CERT_SIZE=$(wc -c < "$RUNNER_TEMP/cert.p12")
+          echo "cert.p12 size: $CERT_SIZE bytes"
           security import "$RUNNER_TEMP/cert.p12" \
             -k "$KEYCHAIN_PATH" \
             -P "$APPLE_CERT_PASSWORD" \
