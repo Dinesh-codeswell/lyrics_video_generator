@@ -36,9 +36,9 @@ A base64-encoded `.p12` export of your Developer ID Application certificate.
 2. Under **My Certificates**, find **Developer ID Application: Your Name (TEAMID)**
 3. Right-click it → **Export**
 4. Save as `certificate.p12`, set a strong password (you'll need it for `APPLE_CERT_PASSWORD`)
-5. Base64-encode it:
+5. Base64-encode it — the `tr -d '\n'` strips line breaks so the value is a single unbroken string:
    ```bash
-   base64 -i certificate.p12 | pbcopy
+   base64 -i certificate.p12 -o - | tr -d '\n' | pbcopy
    ```
 6. Paste the clipboard contents as the secret value
 
