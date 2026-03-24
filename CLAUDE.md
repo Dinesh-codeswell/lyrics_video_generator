@@ -58,6 +58,22 @@ No test suite or linting is currently configured.
 - Lyrics: JSON with `title`, `artist`, `lyrics[]` (each entry has `time` in seconds and `text`). See `input/lyrics/disciples-of-dysfunction.json`.
 - Themes: JSON with properties for colors, fonts, layout, highlighting, and overlay. See `themes/durt_nurs.json` and the README for the full schema.
 
+## User Manual
+
+The user manual lives in `docs/MANUAL.md` and is built automatically during releases. Key commands:
+
+```bash
+# Regenerate GUI screenshots (headless, no display required)
+QT_QPA_PLATFORM=offscreen python scripts/take_screenshots.py
+# Output: docs/screenshots/*.png — commit these after regenerating
+
+# Build and preview the manual locally
+pandoc docs/MANUAL.md --standalone --embed-resources --resource-path=docs -o /tmp/test-manual.html
+open /tmp/test-manual.html
+```
+
+The release workflow (`build-release.yml`) runs the pandoc build automatically on each version tag and attaches `LV-Gen-Manual-vX.X.X.html` to the GitHub Release alongside the `.dmg`. The website's `lv-gen.js` detects this asset by `startsWith('LV-Gen-Manual-')` — do not change that naming convention.
+
 ## Key Conventions
 
 - moviepy v2.0+ API: use `with_fps()`, `with_audio()`, `VideoClip(frame_function)` — not the deprecated v1 methods.

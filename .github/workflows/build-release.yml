@@ -42,6 +42,9 @@ jobs:
       - name: Install create-dmg
         run: brew install create-dmg
 
+      - name: Install pandoc
+        run: brew install pandoc
+
       - name: Build .app with PyInstaller
         run: pyinstaller build.spec
 
@@ -58,8 +61,20 @@ jobs:
             "LV-Gen-${{ github.ref_name }}.dmg" \
             "dist/LV-Gen.app"
 
-      - name: Create GitHub Release and upload .dmg
+      - name: Build HTML manual
+        run: |
+          pandoc docs/MANUAL.md \
+            --standalone \
+            --embed-resources \
+            --resource-path=docs \
+            --metadata title="LV-Gen User Manual" \
+            --metadata version="${{ github.ref_name }}" \
+            -o "LV-Gen-Manual-${{ github.ref_name }}.html"
+
+      - name: Create GitHub Release and upload assets
         uses: softprops/action-gh-release@v2
         with:
-          files: "LV-Gen-${{ github.ref_name }}.dmg"
+          files: |
+            LV-Gen-${{ github.ref_name }}.dmg
+            LV-Gen-Manual-${{ github.ref_name }}.html
           generate_release_notes: true

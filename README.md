@@ -17,6 +17,8 @@ Pre-built `.dmg` releases are attached to each [GitHub Release](https://github.c
 
 > The app bundles all Python dependencies. Only FFmpeg needs to be installed separately.
 
+A **User Manual** (`LV-Gen-Manual-vX.X.X.html`) is also attached to each release. Open it in any browser — no special software required.
+
 ---
 
 ## Requirements (source install)
