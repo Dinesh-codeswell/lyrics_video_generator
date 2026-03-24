@@ -55,7 +55,7 @@ LV-Gen has two interfaces that share the same rendering engine:
    ```
    brew install ffmpeg
    ```
-4. **First launch:** macOS may block the app with a Gatekeeper warning. Right-click **LV-Gen** → **Open** to bypass it. You only need to do this once.
+4. **First launch:** Double-click **LV-Gen** to open — the app is signed and notarized by Apple, so no Gatekeeper warning will appear.
 
 > The app bundles all Python dependencies. Only FFmpeg needs to be installed separately.
 
@@ -494,9 +494,12 @@ python -m src.cli.main --song my-song
 
 ## 14. Troubleshooting
 
-**macOS blocks the app on first launch**
+**macOS blocks the app on first launch (older releases only)**
 
-The app is not notarized by Apple. Right-click **LV-Gen** in your Applications folder → **Open** → click **Open** in the dialog that appears. You only need to do this once.
+Releases prior to v0.1.1 were not notarized. If you downloaded an older release,
+right-click **LV-Gen** in your Applications folder → **Open** → **Open** in the dialog,
+or run `xattr -cr /Applications/LV-Gen.app` in Terminal.
+All releases from v0.1.1 onward are signed and notarized — no workaround needed.
 
 **No songs appear in the Song Selector**
 

@@ -1,15 +1,19 @@
-# Build and publish a macOS .dmg release whenever a version tag is pushed.
+# Build and publish a signed, notarized macOS .dmg release whenever a version tag is pushed.
 #
 # Trigger:
 #   git tag v1.0.0
 #   git push --tags
 #
 # Prerequisites (set in repo Settings → Secrets and variables → Actions):
-#   None required for unsigned builds.
-#   For notarized builds: APPLE_CERT, APPLE_CERT_PASSWORD, APPLE_ID,
-#   APPLE_ID_PASSWORD, APPLE_TEAM_ID  (see docs/signing.md when ready)
+#   APPLE_CERT           - base64-encoded Developer ID Application .p12 certificate
+#   APPLE_CERT_PASSWORD  - password for the .p12
+#   APPLE_ID             - Apple ID email address
+#   APPLE_ID_PASSWORD    - app-specific password (generated at appleid.apple.com)
+#   APPLE_TEAM_ID        - 10-character Apple Developer Team ID
 #
-# The produced .dmg is attached to the GitHub Release automatically.
+#   See docs/signing.md for step-by-step instructions on generating each secret.
+#
+# The produced .dmg and HTML manual are attached to the GitHub Release automatically.
 
 name: Build macOS Release
 
@@ -39,14 +43,58 @@ jobs:
           pip install -e .
           pip install pyinstaller
 
-      - name: Install create-dmg
-        run: brew install create-dmg
-
-      - name: Install pandoc
-        run: brew install pandoc
+      - name: Install create-dmg and pandoc
+        run: brew install create-dmg pandoc
 
       - name: Build .app with PyInstaller
         run: pyinstaller build.spec
+
+      - name: Import signing certificate
+        env:
+          APPLE_CERT: ${{ secrets.APPLE_CERT }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 20)
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          echo "$APPLE_CERT" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$APPLE_CERT_PASSWORD" \
+            -T /usr/bin/codesign
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" \
+            "$KEYCHAIN_PATH"
+
+          # Prepend the temp keychain to the search list
+          security list-keychains -d user -s \
+            "$KEYCHAIN_PATH" \
+            $(security list-keychains -d user | tr -d '"')
+
+      - name: Sign .app
+        run: |
+          # Identify the Developer ID certificate imported above
+          IDENTITY=$(security find-identity -v -p codesigning \
+            "$RUNNER_TEMP/build.keychain" \
+            | grep "Developer ID Application" \
+            | head -1 \
+            | awk '{print $2}')
+
+          codesign \
+            --force \
+            --deep \
+            --options runtime \
+            --entitlements entitlements.plist \
+            --sign "$IDENTITY" \
+            dist/LV-Gen.app
+
+          # Verify the signature
+          codesign --verify --deep --strict dist/LV-Gen.app
 
       - name: Create .dmg
         run: |
@@ -60,6 +108,22 @@ jobs:
             --app-drop-link 450 185 \
             "LV-Gen-${{ github.ref_name }}.dmg" \
             "dist/LV-Gen.app"
+
+      - name: Notarize .dmg
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool submit \
+            "LV-Gen-${{ github.ref_name }}.dmg" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+      - name: Staple notarization ticket
+        run: xcrun stapler staple "LV-Gen-${{ github.ref_name }}.dmg"
 
       - name: Build HTML manual
         run: |

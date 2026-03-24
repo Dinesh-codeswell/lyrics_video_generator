@@ -13,7 +13,7 @@ Pre-built `.dmg` releases are attached to each [GitHub Release](https://github.c
 1. Download the latest `LV-Gen-vX.X.X.dmg`
 2. Open the `.dmg` and drag **LV-Gen** to your Applications folder
 3. Install FFmpeg if you haven't already: `brew install ffmpeg`
-4. On first launch, macOS may block the app — right-click → **Open** to bypass the Gatekeeper warning
+4. On first launch, double-click **LV-Gen** to open — the app is signed and notarized by Apple
 
 > The app bundles all Python dependencies. Only FFmpeg needs to be installed separately.
 
