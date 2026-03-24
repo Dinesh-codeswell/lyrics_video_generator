@@ -1,7 +1,7 @@
 """Song selector panel — left sidebar of the main window."""
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore import Qt, QUrl, pyqtSignal
+from PyQt6.QtGui import QColor, QDesktopServices
 from PyQt6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
@@ -14,7 +14,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core.song_resolver import SongInfo, resolve_song, scan_songs
+from src.core.song_resolver import INPUT_LYRICS_DIR, SongInfo, resolve_song, scan_songs
+from src.gui.dialogs.import_song_dialog import ImportSongDialog
 
 
 class _SongListItem(QListWidgetItem):
@@ -70,12 +71,20 @@ class SongSelectorPanel(QGroupBox):
         refresh_btn = QPushButton("Refresh")
         refresh_btn.clicked.connect(self.scan)
 
+        open_folder_btn = QPushButton("Open Input Folder")
+        open_folder_btn.clicked.connect(self._open_input_folder)
+
+        import_btn = QPushButton("Import Song…")
+        import_btn.clicked.connect(self._import_song)
+
         self._load_btn = QPushButton("Load Song")
         self._load_btn.setEnabled(False)
         self._load_btn.clicked.connect(self._load_selected)
 
         btn_row.addWidget(refresh_btn)
+        btn_row.addWidget(open_folder_btn)
         btn_row.addStretch()
+        btn_row.addWidget(import_btn)
         btn_row.addWidget(self._load_btn)
         layout.addLayout(btn_row)
 
@@ -85,26 +94,47 @@ class SongSelectorPanel(QGroupBox):
     # Scanning
     # ------------------------------------------------------------------
 
-    def scan(self):
+    def scan(self, select_slug: str | None = None):
         self._list.clear()
         songs = scan_songs()
 
         if not songs:
-            placeholder = QListWidgetItem("No songs found in input/")
+            placeholder = QListWidgetItem(
+                "No songs found.\n"
+                "Click 'Import Song…' to add files,\n"
+                "or place files in the input/ folder and click Refresh."
+            )
             placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
             placeholder.setForeground(QColor("gray"))
             self._list.addItem(placeholder)
             self._load_btn.setEnabled(False)
             return
 
+        target_item = None
         for info in songs:
-            self._list.addItem(_SongListItem(info))
+            item = _SongListItem(info)
+            self._list.addItem(item)
+            if select_slug and info.name == select_slug:
+                target_item = item
+
+        if target_item:
+            self._list.setCurrentItem(target_item)
 
         self._load_btn.setEnabled(False)
 
     # ------------------------------------------------------------------
     # Interaction
     # ------------------------------------------------------------------
+
+    def _open_input_folder(self) -> None:
+        input_dir = INPUT_LYRICS_DIR.parent
+        input_dir.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(input_dir)))
+
+    def _import_song(self) -> None:
+        dlg = ImportSongDialog(self)
+        if dlg.exec() == ImportSongDialog.DialogCode.Accepted and dlg.result_slug:
+            self.scan(select_slug=dlg.result_slug)
 
     def _on_selection_changed(self, current: QListWidgetItem | None, _prev):
         if isinstance(current, _SongListItem):
