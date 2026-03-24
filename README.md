@@ -6,6 +6,8 @@
 
 Generate lyric videos with timed text animations from a JSON lyrics file and an audio track. Outputs YouTube-ready 1080p MP4 videos (H.264 video, AAC audio).
 
+![LV-Gen main window](docs/screenshots/main-window.png)
+
 ## Download (macOS)
 
 Pre-built `.dmg` releases are attached to each [GitHub Release](https://github.com/CuWilliams/lyric-video-generator/releases).
