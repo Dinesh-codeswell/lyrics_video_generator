@@ -11,9 +11,14 @@
 #   - Run from the repo root with your venv active
 
 import sys
+from importlib.metadata import version as _pkg_version
 from pathlib import Path
 
 block_cipher = None
+
+# Read version from pyproject.toml via installed package metadata.
+# Run `pip install -e .` once before building to register the package.
+_VERSION = _pkg_version("lyric-video-generator")
 
 # Data files to bundle with the app
 datas = [
@@ -100,8 +105,8 @@ app = BUNDLE(
         "NSHighResolutionCapable": True,
         "NSRequiresAquaSystemAppearance": False,  # Allows dark mode
         "NSPrincipalClass": "NSApplication",      # Ensures CFBundleGetMainBundle() is valid at Qt init
-        "CFBundleShortVersionString": "1.0.0",
-        "CFBundleVersion": "1",
+        "CFBundleShortVersionString": _VERSION,
+        "CFBundleVersion": _VERSION,
         "LSMinimumSystemVersion": "11.0",         # macOS Big Sur+
     },
 )

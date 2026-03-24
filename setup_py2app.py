@@ -7,7 +7,12 @@ Usage:
 
 Output: dist/LV-Gen.app
 """
+from importlib.metadata import version as _pkg_version
 from setuptools import setup
+
+# Read version from pyproject.toml via installed package metadata.
+# Run `pip install -e .` once before building to register the package.
+_VERSION = _pkg_version("lyric-video-generator")
 
 # py2app 0.28 raises an error if install_requires is set on the distribution,
 # but setuptools auto-populates it from pyproject.toml. Clear it before py2app
@@ -35,8 +40,8 @@ OPTIONS = {
         "CFBundleName": "LV-Gen",
         "CFBundleDisplayName": "LV-Gen",
         "CFBundleIdentifier": "com.durtnurs.lv-gen",
-        "CFBundleVersion": "1.0.0",
-        "CFBundleShortVersionString": "1.0.0",
+        "CFBundleVersion": _VERSION,
+        "CFBundleShortVersionString": _VERSION,
         "NSHighResolutionCapable": True,
         "NSRequiresAquaSystemAppearance": False,
         "NSPrincipalClass": "NSApplication",
