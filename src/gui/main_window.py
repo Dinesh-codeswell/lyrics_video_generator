@@ -1,9 +1,10 @@
 """Main application window for the lyric video generator GUI."""
 
+import sys
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QAbstractSpinBox,
     QApplication,
@@ -36,6 +37,12 @@ class MainWindow(QMainWindow):
         self._song_name: str = ""
         self._lyrics_dirty: bool = False
         self._theme_dirty: bool = False
+
+        _icon_path = Path(__file__).parents[2] / "assets" / "icon.png"
+        if _icon_path.exists():
+            self.setWindowIcon(QIcon(str(_icon_path)))
+            if sys.platform == "darwin":
+                self.setWindowFilePath(str(_icon_path))
 
         self._update_title()
         screen = QApplication.primaryScreen().availableGeometry()
@@ -196,7 +203,7 @@ class MainWindow(QMainWindow):
         self._update_title()
 
     def _update_title(self) -> None:
-        base = "Durt Nurs Lyric Video Generator"
+        base = "Lyric Video Generator"
         dirty = self._lyrics_dirty or self._theme_dirty
         prefix = "• " if dirty else ""
         name_part = f"{self._song_name} — " if self._song_name else ""
@@ -341,7 +348,7 @@ class MainWindow(QMainWindow):
         QMessageBox.about(
             self,
             "About",
-            "<b>Durt Nurs Lyric Video Generator</b><br>"
+            "<b>Lyric Video Generator</b><br>"
             "Generate YouTube-ready 1080p lyric videos<br>"
             "from a JSON lyrics file and an audio track.",
         )

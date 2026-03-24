@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lyric-video-generator"
-version = "0.1.0"
+version = "0.1.1"
 description = "Generate lyric videos with timed text animations"
 requires-python = ">=3.10"
 dependencies = [

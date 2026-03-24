@@ -1,6 +1,7 @@
 """GUI entry point for lyric-video-generator."""
 
 import sys
+from pathlib import Path
 
 # On macOS, QtCore.abi3.so contains a C++ static initializer that calls
 # CFBundleGetMainBundle() the moment the library is dlopen'd. On macOS 26+,
@@ -28,6 +29,7 @@ if sys.platform == "darwin":
     except Exception:
         pass
 
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 
 from src.gui.main_window import MainWindow
@@ -35,7 +37,10 @@ from src.gui.main_window import MainWindow
 
 def main():
     app = QApplication(sys.argv)
-    app.setApplicationName("Durt Nurs Lyric Video Generator")
+    app.setApplicationName("Lyric Video Generator")
+    _icon_path = Path(__file__).parents[2] / "assets" / "icon.png"
+    if _icon_path.exists():
+        app.setWindowIcon(QIcon(str(_icon_path)))
     app.setStyleSheet("""
         QGroupBox {
             font-size: 14pt;
