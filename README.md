@@ -8,6 +8,8 @@ Generate lyric videos with timed text animations from a JSON lyrics file and an 
 
 ![LV-Gen main window](docs/screenshots/main-window.png)
 
+> **Platform support:** The pre-built GUI app and `.dmg` installer are **macOS only**. The CLI (`lyric-video`) runs on macOS, Linux, and Windows via source install.
+
 ## Download (macOS)
 
 Pre-built `.dmg` releases are attached to each [GitHub Release](https://github.com/CuWilliams/lyric-video-generator/releases).
