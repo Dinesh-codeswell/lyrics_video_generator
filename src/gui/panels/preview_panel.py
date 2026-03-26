@@ -106,6 +106,10 @@ class _PreviewWorker(QObject):
 class PreviewPanel(QGroupBox):
     """Center-top panel: generates and plays a 30-second preview clip."""
 
+    preview_playback_started = pyqtSignal(float)  # emits preview_start_s when play begins
+    preview_position_changed = pyqtSignal(int)     # emits song position in ms during playback
+    preview_playback_stopped = pyqtSignal()        # emits when paused or stopped
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__("Preview", parent)
         self._song_paths: dict | None = None
@@ -114,6 +118,7 @@ class PreviewPanel(QGroupBox):
         self._rendered_stamp: int = -1
         self._temp_path: Path | None = None
         self._thread: QThread | None = None
+        self._preview_start_s: float = 0.0
         self._build_ui()
 
     # ──────────────────────────────────────────────────────────────────
@@ -245,6 +250,9 @@ class PreviewPanel(QGroupBox):
         self._play_btn.setEnabled(False)
         self._progress_bar.show()
 
+        # Capture start time for timeline sync
+        self._preview_start_s = self._start_spin.value()
+
         # Spawn worker thread
         self._thread = QThread(self)
         self._worker = _PreviewWorker(
@@ -252,7 +260,7 @@ class PreviewPanel(QGroupBox):
             audio_path=self._song_paths["audio"],
             background_path=self._song_paths.get("background"),
             theme=self._theme,
-            start_time=self._start_spin.value(),
+            start_time=self._preview_start_s,
             out_path=str(self._temp_path),
         )
         self._worker.moveToThread(self._thread)
@@ -309,11 +317,16 @@ class PreviewPanel(QGroupBox):
     def _update_play_btn(self, state: QMediaPlayer.PlaybackState) -> None:
         playing = state == QMediaPlayer.PlaybackState.PlayingState
         self._play_btn.setText("⏸" if playing else "▶")
+        if playing:
+            self.preview_playback_started.emit(self._preview_start_s)
+        else:
+            self.preview_playback_stopped.emit()
 
     def _on_position_changed(self, ms: int) -> None:
         self._time_label.setText(
             f"{_fmt_ms(ms)} / {_fmt_ms(self._media_player.duration())}"
         )
+        self.preview_position_changed.emit(int(self._preview_start_s * 1000) + ms)
 
     def _on_duration_changed(self, ms: int) -> None:
         self._time_label.setText(

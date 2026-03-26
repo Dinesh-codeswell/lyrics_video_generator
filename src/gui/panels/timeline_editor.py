@@ -983,6 +983,13 @@ class TimelineEditorPanel(QGroupBox):
         self._interp_base_s:    float = 0.0
         self._interp_base_wall: float = 0.0
 
+        # Preview sync timer (mirrors AudioPlayer smooth-scroll for video preview)
+        self._preview_timer = QTimer(self)
+        self._preview_timer.setInterval(16)
+        self._preview_timer.timeout.connect(self._preview_sync_tick)
+        self._preview_interp_base_s:    float = 0.0
+        self._preview_interp_base_wall: float = 0.0
+
         self._build_ui()
         self._connect_player()
 
@@ -1282,6 +1289,35 @@ class TimelineEditorPanel(QGroupBox):
         """
         elapsed  = time.perf_counter() - self._interp_base_wall
         t        = self._interp_base_s + elapsed
+        if self._duration_s > 0.0:
+            t = min(t, self._duration_s)
+        cursor_x = int(t * self._px_per_sec())
+        self._canvas.set_cursor(t)
+        if self._follow_playhead:
+            sb   = self._scroll.horizontalScrollBar()
+            vp_w = self._scroll.viewport().width()
+            sb.setValue(max(0, cursor_x - int(vp_w * 0.30)))
+
+    # ── preview sync ──────────────────────────────────────────────────────────
+
+    def on_preview_started(self, preview_start_s: float) -> None:
+        """Sync timeline cursor to preview playback start."""
+        self._preview_interp_base_s    = preview_start_s
+        self._preview_interp_base_wall = time.perf_counter()
+        self._preview_timer.start()
+
+    def on_preview_position(self, song_ms: int) -> None:
+        """Refresh interpolation base from QMediaPlayer positionChanged."""
+        self._preview_interp_base_s    = song_ms / 1000.0
+        self._preview_interp_base_wall = time.perf_counter()
+
+    def on_preview_stopped(self) -> None:
+        """Stop syncing — cursor remains at last position."""
+        self._preview_timer.stop()
+
+    def _preview_sync_tick(self) -> None:
+        elapsed  = time.perf_counter() - self._preview_interp_base_wall
+        t        = self._preview_interp_base_s + elapsed
         if self._duration_s > 0.0:
             t = min(t, self._duration_s)
         cursor_x = int(t * self._px_per_sec())

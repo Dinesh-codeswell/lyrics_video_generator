@@ -73,6 +73,11 @@ class MainWindow(QMainWindow):
         self._theme_editor.theme_dirty_changed.connect(self._on_theme_dirty)
         self._export_bar.set_pre_export_check(self._check_dirty_before_export)
 
+        # Preview → timeline cursor sync
+        self._preview.preview_playback_started.connect(self._timeline.on_preview_started)
+        self._preview.preview_position_changed.connect(self._timeline.on_preview_position)
+        self._preview.preview_playback_stopped.connect(self._timeline.on_preview_stopped)
+
         self.setCentralWidget(container)
         self._build_shortcuts()
 

@@ -4,6 +4,13 @@ All notable changes to LV-Gen are documented here.
 
 ---
 
+## [0.1.2] — 2026-03-26
+
+### Added
+- Preview ↔ timeline sync: the timeline editor cursor now follows preview playback in real time, advancing smoothly with wall-clock interpolation and auto-scrolling via the existing "Follow playhead" setting. Cursor remains at the last position on pause for frame-accurate inspection of lyric timing.
+
+---
+
 ## [0.1.1] — 2026-03-24
 
 ### Added
