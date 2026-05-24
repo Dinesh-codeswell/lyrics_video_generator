@@ -12,8 +12,13 @@ import './Dashboard.css';
 
 // Environment-aware API URL
 const isProd = import.meta.env.PROD;
-const API_BASE_URL = import.meta.env.VITE_API_URL || (isProd ? window.location.origin : 'http://localhost:8000');
+const VITE_API_URL = import.meta.env.VITE_API_URL;
 
+// In production, we MUST have an explicit API URL or it will 404 on Vercel.
+// We fallback to empty string in prod if missing to avoid 'window.location.origin' which causes 404s.
+const API_BASE_URL = VITE_API_URL || (isProd ? '' : 'http://localhost:8000');
+
+const CONFIGURATION_ERROR = 'Production Setup Required: Please set the VITE_API_URL environment variable in Vercel to your live Python backend.';
 const PRODUCTION_ERROR = 'Connecting to production services... This may take a moment if the server is waking up.';
 const DEVELOPMENT_ERROR = 'Backend server unreachable. Please start the API using .\\venv\\Scripts\\python.exe -m src.api.main';
 
@@ -173,7 +178,19 @@ export const Dashboard: React.FC = () => {
   };
 
   useEffect(() => {
+    // Diagnostic log for production troubleshooting
+    console.log(`[Production Diagnostic] API_BASE_URL is set to: "${API_BASE_URL}"`);
+    if (isProd && !VITE_API_URL) {
+      console.warn('[Production Warning] VITE_API_URL environment variable is missing in Vercel settings.');
+    }
+
     const checkApi = async () => {
+      // If in production and we don't even have a URL, don't bother fetching
+      if (isProd && !VITE_API_URL) {
+        setApiError(CONFIGURATION_ERROR);
+        return;
+      }
+
       try {
         const resp = await fetch(`${API_BASE_URL}/api/songs`);
         if (resp.ok) setApiError(null);

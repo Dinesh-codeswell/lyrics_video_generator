@@ -5,7 +5,8 @@ import './SongSelector.css';
 
 // Environment-aware API URL
 const isProd = import.meta.env.PROD;
-const API_BASE_URL = import.meta.env.VITE_API_URL || (isProd ? window.location.origin : 'http://localhost:8000');
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = VITE_API_URL || (isProd ? '' : 'http://localhost:8000');
 
 interface Song {
   name: string;
@@ -40,6 +41,7 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
   const [loadingAI, setLoadingAI] = useState<string | null>(null);
 
   const fetchSongs = async () => {
+    if (isProd && !VITE_API_URL) return; // Don't fetch if misconfigured in prod
     setLoading(true);
     try {
       const [songsResp, bgResp] = await Promise.all([

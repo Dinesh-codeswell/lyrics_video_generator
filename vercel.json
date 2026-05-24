@@ -2,12 +2,6 @@
   "version": 2,
   "public": true,
   "name": "lyric-video-generator",
-  "rewrites": [
-    {
-      "source": "/(api|download_raw|songs|backgrounds|auto-lyrics|generate|status|download)/(.*)",
-      "destination": "http://localhost:8000/$1/$2"
-    }
-  ],
   "framework": "vite",
   "installCommand": "npm install",
   "buildCommand": "npm run build",
