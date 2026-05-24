@@ -4,7 +4,8 @@ import { Button } from '../ui/Button';
 import './SongSelector.css';
 
 // Environment-aware API URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const isProd = import.meta.env.PROD;
+const API_BASE_URL = import.meta.env.VITE_API_URL || (isProd ? window.location.origin : 'http://localhost:8000');
 
 interface Song {
   name: string;
