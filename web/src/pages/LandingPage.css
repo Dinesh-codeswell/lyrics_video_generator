@@ -5,6 +5,32 @@
   font-family: var(--font-haffer);
 }
 
+/* Latest Blog Section */
+.latest-blog-section {
+  padding: 120px 0;
+  background-color: white;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 48px;
+}
+
+.section-title {
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+}
+
+.view-all-link {
+  text-decoration: none;
+  color: var(--color-midnight-blue);
+  font-weight: 700;
+  font-size: 16px;
+}
+
 .footer-micro {
   padding: 80px 24px;
   background-color: white;

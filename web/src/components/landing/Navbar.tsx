@@ -11,8 +11,9 @@ export const Navbar: React.FC = () => {
           LyricGen
         </Link>
         <div className="navbar-links">
-          <a href="#features" className="nav-link">Features</a>
-          <a href="#creators" className="nav-link">For Creators</a>
+          <a href="/#features" className="nav-link">Features</a>
+          <a href="/#creators" className="nav-link">For Creators</a>
+          <Link to="/blog" className="nav-link">Blog</Link>
           <Link to="/dashboard">
             <button className="btn-primary-filled">Open Dashboard</button>
           </Link>
