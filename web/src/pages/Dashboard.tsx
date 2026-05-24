@@ -185,12 +185,10 @@ export const Dashboard: React.FC = () => {
   const handleSongSelect = async (slug: string) => {
     setSelectedSong(slug);
     try {
-      // 1. Get file paths
       const resp = await fetch(`${API_BASE_URL}/api/songs/${slug}`);
       const paths = await resp.json();
       setSongPaths(paths);
 
-      // 2. Fetch and parse lyrics into Clips (Auto-embedding)
       if (paths.lyrics) {
         const lyrResp = await fetch(`${API_BASE_URL}/api/download_raw?path=${paths.lyrics}`);
         const lyrData = await lyrResp.json();
@@ -231,7 +229,6 @@ export const Dashboard: React.FC = () => {
         }
       }
 
-      // 3. Load theme if exists
       if (paths.theme) {
         const themeResp = await fetch(`${API_BASE_URL}/api/download_raw?path=${paths.theme}`);
         const themeData = await themeResp.json();
@@ -257,7 +254,6 @@ export const Dashboard: React.FC = () => {
       });
       
       if (resp.ok) {
-        // Refresh song paths to show new background in preview
         const pathsResp = await fetch(`${API_BASE_URL}/api/songs/${selectedSong}`);
         const paths = await pathsResp.json();
         setSongPaths(paths);
@@ -295,9 +291,7 @@ export const Dashboard: React.FC = () => {
         try {
           const statusResp = await fetch(`${API_BASE_URL}/api/status/${data.job_id}`);
           const statusData = await statusResp.json();
-          
           setRenderProgress(statusData.progress || 0);
-
           if (statusData.status === 'completed' || statusData.status === 'failed') {
             clearInterval(poll);
             setIsExporting(false);
@@ -398,117 +392,112 @@ export const Dashboard: React.FC = () => {
 
         <main className="dashboard-main">
           <div className="top-row">
-            <div className="preview-area">
-              <Card 
-                title="Live Preview" 
-                className="panel-card preview-card"
-                headerActions={
-                  <Button variant="ghost" size="sm" onClick={toggleFullScreen} title="Fullscreen Preview">
-                    <Maximize size={14} />
-                  </Button>
-                }
+            {/* Unified Preview Stage */}
+            <div className="preview-stage-container">
+              <div 
+                ref={stageRef}
+                className="unified-preview-stage" 
+                style={{ 
+                  backgroundColor: theme.background_color,
+                  aspectRatio: theme.aspect_ratio.replace(':', '/'),
+                }}
               >
-                  <div 
-                    ref={stageRef}
-                    className="preview-stage" 
-                    style={{ 
-                      backgroundColor: theme.background_color,
-                      aspectRatio: theme.aspect_ratio.replace(':', '/'),
-                      maxHeight: '100%'
-                    }}
-                  >
-                    {/* Background Video */}
-                    {songPaths?.background && (
-                      <video 
-                        ref={bgVideoRef}
-                        src={`${API_BASE_URL}/api/download_raw?path=${songPaths.background}`}
-                        autoPlay 
-                        loop 
-                        muted 
-                        className="preview-bg-video"
-                      />
-                    )}
+                {/* Layer 1: Background Video */}
+                {songPaths?.background && (
+                  <video 
+                    ref={bgVideoRef}
+                    src={`${API_BASE_URL}/api/download_raw?path=${songPaths.background}`}
+                    autoPlay 
+                    loop 
+                    muted 
+                    className="compositor-layer layer-bg"
+                  />
+                )}
 
-                    {/* Background Overlay */}
-                    <div 
-                      className="preview-overlay" 
-                      style={{ 
-                        backgroundColor: theme.text_overlay_color,
-                        opacity: theme.text_overlay_opacity / 100 
-                      }} 
+                {/* Layer 2: Theme Overlay */}
+                <div 
+                  className="compositor-layer layer-overlay" 
+                  style={{ 
+                    backgroundColor: theme.text_overlay_color,
+                    opacity: theme.text_overlay_opacity / 100 
+                  }} 
+                />
+
+                {/* Layer 3: Branding / Logo */}
+                {theme.logo_path && (
+                  <div className="compositor-layer layer-logo" style={{ textAlign: theme.logo_h_align }}>
+                    <img 
+                      src={`${API_BASE_URL}/api/download_raw?path=${theme.logo_path}`} 
+                      alt="Logo"
+                      style={{ width: `${theme.logo_width * previewScale}px`, height: 'auto' }}
+                      onError={(e) => (e.currentTarget.style.display = 'none')}
                     />
+                  </div>
+                )}
 
-                    {/* Logo Section */}
-                    {theme.logo_path && (
-                      <div className="preview-logo-container" style={{ textAlign: theme.logo_h_align }}>
-                        <img 
-                          src={`${API_BASE_URL}/api/download_raw?path=${theme.logo_path}`} 
-                          alt="Logo"
-                          style={{ width: `${theme.logo_width / 4}px`, height: 'auto' }}
-                          onError={(e) => (e.currentTarget.style.display = 'none')}
-                        />
-                      </div>
-                    )}
-
-                    {/* Cinematic Animation Engine */}
-                    <div className="preview-lyrics-container">
-                      {theme.animation_style === 'scroll' ? (
+                {/* Layer 4: Lyric Animation Engine */}
+                <div className="compositor-layer layer-lyrics">
+                  {theme.animation_style === 'scroll' ? (
+                    <div 
+                      className="lyrics-scroller"
+                      style={{ 
+                        transform: `translateY(${(stageHeight / 2) - scrollOffset}px)`,
+                        transition: `transform ${0.3 / theme.animation_speed}s linear`
+                      }}
+                    >
+                      {visibleLines.map((line) => {
+                        const isCurrent = line.index === activeIndex;
+                        const gradIdx = Math.abs(line.index - activeIndex) - 1;
+                        const opacity = isCurrent ? 1 : (theme.inactive_text_opacity_gradient[gradIdx] ?? 0.1);
+                        
+                        return (
+                          <div key={line.id} className="lyric-line-wrapper" style={{ top: `${line.y}px`, opacity }}>
+                            <div className="lyric-line-text" style={getLineStyles(isCurrent, theme)}>
+                              {renderLineText(line, isCurrent, theme, currentTime, clips[activeIndex])}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className={`lyrics-static-stage ${theme.animation_style}`}>
+                      {clips[activeIndex] && (
                         <div 
-                          className="preview-scroller-inner"
-                          style={{ 
-                            transform: `translateY(${(stageHeight / 2) - scrollOffset}px)`,
-                            transition: `transform ${0.3 / theme.animation_speed}s linear`
+                          key={clips[activeIndex].id} 
+                          className="animate-current-line"
+                          style={{
+                            ...getLineStyles(true, theme),
+                            animationDuration: `${0.5 / theme.animation_speed}s`
                           }}
                         >
-                          {visibleLines.map((line) => {
-                            const isCurrent = line.index === activeIndex;
-                            const gradIdx = Math.abs(line.index - activeIndex) - 1;
-                            const opacity = isCurrent ? 1 : (theme.inactive_text_opacity_gradient[gradIdx] ?? 0.1);
-                            
-                            return (
-                              <div key={line.id} className="preview-text-wrapper" style={{ top: `${line.y}px`, transform: 'translateY(-50%)', opacity }}>
-                                <div className="preview-text" style={getLineStyles(isCurrent, theme)}>
-                                  {renderLineText(line, isCurrent, theme, currentTime, clips[activeIndex])}
-                                </div>
-                              </div>
-                            );
-                          })}
+                          {renderLineText(clips[activeIndex], true, theme, currentTime, clips[activeIndex])}
                         </div>
-                      ) : (
-                        <div className={`preview-static-stage ${theme.animation_style}`}>
-                          {clips[activeIndex] && (
-                            <div 
-                              key={clips[activeIndex].id} 
-                              className="animate-current-line"
-                              style={{
-                                ...getLineStyles(true, theme),
-                                animationDuration: `${0.5 / theme.animation_speed}s`
-                              }}
-                            >
-                              {renderLineText(clips[activeIndex], true, theme, currentTime, clips[activeIndex])}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      
-                      {!selectedSong && (
-                        <div className="preview-placeholder">Load a song to see preview</div>
                       )}
                     </div>
+                  )}
+                </div>
 
-                    {/* Export Progress Overlay */}
-                    {isExporting && (
-                      <div className="export-progress-overlay">
-                        <div className="progress-container">
-                          <div className="progress-label">RENDERING VIDEO... {renderProgress}%</div>
-                          <div className="progress-track">
-                            <div className="progress-fill" style={{ width: `${renderProgress}%` }} />
-                          </div>
-                        </div>
+                {/* Layer 5: UI Overlays (Export Progress, etc.) */}
+                {isExporting && (
+                  <div className="compositor-layer layer-ui-overlay">
+                    <div className="progress-container">
+                      <div className="progress-label">RENDERING VIDEO... {renderProgress}%</div>
+                      <div className="progress-track">
+                        <div className="progress-fill" style={{ width: `${renderProgress}%` }} />
                       </div>
-                    )}
+                    </div>
                   </div>
-              </Card>
+                )}
+
+                {/* Fullscreen Trigger */}
+                <button className="stage-fullscreen-btn" onClick={toggleFullScreen} title="Fullscreen Preview">
+                  <Maximize size={16} />
+                </button>
+                
+                {!selectedSong && (
+                  <div className="preview-placeholder">Load a song to begin production</div>
+                )}
+              </div>
             </div>
             
             <aside className="sidebar right-sidebar">
@@ -519,7 +508,8 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="timeline-area">
-             <Card title="Professional Video Editor" className="panel-card timeline-card">
+             {/* Unified Editor Stage */}
+             <div className="unified-editor-container">
                 <WebTimeline 
                   audioUrl={songPaths?.audio ? `${API_BASE_URL}/api/download_raw?path=${songPaths.audio}` : undefined}
                   bgUrl={songPaths?.background ? `${API_BASE_URL}/api/download_raw?path=${songPaths.background}` : undefined}
@@ -527,7 +517,7 @@ export const Dashboard: React.FC = () => {
                   onClipChange={setClips}
                   onTimeUpdate={setCurrentTime}
                 />
-             </Card>
+             </div>
           </div>
         </main>
       </div>
