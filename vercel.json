@@ -10,6 +10,10 @@
     {
       "source": "/api/(.*)",
       "destination": "https://lyrics-video-generator-s7tr.onrender.com/api/$1"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }
