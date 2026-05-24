@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Link } from 'react-router-dom';
-import { Layout, Music, Settings, Video, Download, HelpCircle, Save, Undo, Redo, Plus, Trash2, Milestone, Maximize } from 'lucide-react';
+import { Save, Undo, Redo, Download, HelpCircle, Maximize } from 'lucide-react';
 import { SongSelector } from '../components/dashboard/SongSelector';
 import { ThemeEditor } from '../components/dashboard/ThemeEditor';
 import { WebTimeline } from '../components/dashboard/WebTimeline';
@@ -40,10 +40,8 @@ export const Dashboard: React.FC = () => {
   // Sync background video with playhead
   useEffect(() => {
     if (bgVideoRef.current) {
-      // Background videos are usually looping, so we just ensure it's playing if music is playing
       // In a real NLE, we might seek to (currentTime % bgDuration)
       // but for music video vibes, continuous loop is often preferred.
-      // For now, let's just make it visible and sync-able if needed.
     }
   }, [currentTime]);
 
@@ -58,10 +56,9 @@ export const Dashboard: React.FC = () => {
     );
   }, [currentTime, clips]);
 
-  // NEW: Find the index of the lyric that started most recently (for scrolling continuity)
+  // Find the index of the lyric that started most recently (for scrolling continuity)
   const lastStartedIndex = React.useMemo(() => {
     if (!clips.length) return -1;
-    // findLastIndex fallback for older browsers/environments
     for (let i = clips.length - 1; i >= 0; i--) {
       if (currentTime >= clips[i].start_time) return i;
     }
@@ -72,28 +69,20 @@ export const Dashboard: React.FC = () => {
   const scrollOffset = React.useMemo(() => {
     if (clips.length === 0) return 0;
     
-    // If we haven't reached the first lyric yet, stay at the top or glide in
     if (lastStartedIndex === -1 || (lastStartedIndex === 0 && currentTime < clips[0].start_time)) {
        return 0;
     }
 
     const i = lastStartedIndex;
-    
-    // If it's the last lyric, stay centered on it
     if (i >= clips.length - 1) return i * 120;
 
     const currentClip = clips[i];
     const nextClip = clips[i + 1];
-    
-    // Total time between the START of this lyric and the START of the next one
     const totalGap = nextClip.start_time - currentClip.start_time;
     
     if (totalGap <= 0) return i * 120;
 
-    // Linear progress from this checkpoint to the next
     const progress = (currentTime - currentClip.start_time) / totalGap;
-    
-    // Continuous pixel offset
     return (i + progress) * 120;
   }, [currentTime, clips, lastStartedIndex]);
 
@@ -102,7 +91,7 @@ export const Dashboard: React.FC = () => {
     if (!selectedSong || !clips.length) return [];
     
     const centerIdx = lastStartedIndex >= 0 ? lastStartedIndex : 0;
-    const range = 8; // Render a wide enough window to see 'flow'
+    const range = 8;
     const start = Math.max(0, centerIdx - 4);
     const end = Math.min(clips.length, centerIdx + range);
     
@@ -118,49 +107,49 @@ export const Dashboard: React.FC = () => {
   }, [selectedSong, clips, lastStartedIndex]);
 
   // --- Animation Helpers ---
-  const getLineStyles = (isCurrent: boolean, theme: Theme): React.CSSProperties => ({
-    fontSize: `${theme.font_size / 2}px`, 
-    color: isCurrent && theme.highlight_mode === 'line' ? theme.active_text_color : theme.text_color,
-    fontFamily: theme.font_family,
-    textAlign: theme.lyric_position,
-    fontWeight: (isCurrent && theme.active_text_bold) ? 'bold' : 'normal',
-    textShadow: (isCurrent && theme.active_text_glow) ? `0 0 10px ${theme.active_glow_color || theme.active_text_color}` : 'none',
-    WebkitTextStroke: isCurrent ? `${theme.active_text_stroke_width / 2}px ${theme.active_text_stroke_color}` : 'none',
-    letterSpacing: `${theme.letter_spacing / 2}px`,
-    maxWidth: `${theme.column_width / 2}px`,
+  const getLineStyles = (isCurrent: boolean, currentTheme: Theme): React.CSSProperties => ({
+    fontSize: `${currentTheme.font_size / 2}px`, 
+    color: isCurrent && currentTheme.highlight_mode === 'line' ? currentTheme.active_text_color : currentTheme.text_color,
+    fontFamily: currentTheme.font_family,
+    textAlign: currentTheme.lyric_position,
+    fontWeight: (isCurrent && currentTheme.active_text_bold) ? 'bold' : 'normal',
+    textShadow: (isCurrent && currentTheme.active_text_glow) ? `0 0 10px ${currentTheme.active_glow_color || currentTheme.active_text_color}` : 'none',
+    WebkitTextStroke: isCurrent ? `${currentTheme.active_text_stroke_width / 2}px ${currentTheme.active_text_stroke_color}` : 'none',
+    letterSpacing: `${currentTheme.letter_spacing / 2}px`,
+    maxWidth: `${currentTheme.column_width / 2}px`,
     width: '100%',
     padding: '0 20px',
   });
 
-  const renderLineText = (line: LyricClip, isCurrent: boolean, theme: Theme, currentTime: number, activeClip: LyricClip) => {
+  const renderLineText = (line: LyricClip, isCurrent: boolean, currentTheme: Theme, time: number, activeClip: LyricClip) => {
     if (!isCurrent) return line.text;
 
     // Typewriter Logic
-    if (theme.animation_style === 'typewriter') {
+    if (currentTheme.animation_style === 'typewriter') {
       const dur = activeClip.end_time - activeClip.start_time;
-      const prog = Math.max(0, Math.min(1, (currentTime - activeClip.start_time) / dur));
+      const prog = Math.max(0, Math.min(1, (time - activeClip.start_time) / dur));
       const charCount = Math.floor(line.text.length * prog);
       return line.text.substring(0, charCount);
     }
 
     // Word/Character Highlights
-    if (theme.highlight_mode === 'word' || theme.highlight_mode === 'character') {
+    if (currentTheme.highlight_mode === 'word' || currentTheme.highlight_mode === 'character') {
       const dur = activeClip.end_time - activeClip.start_time;
-      const progress = Math.max(0, Math.min(1, (currentTime - activeClip.start_time) / dur));
+      const progress = Math.max(0, Math.min(1, (time - activeClip.start_time) / dur));
       
-      if (theme.highlight_mode === 'word') {
+      if (currentTheme.highlight_mode === 'word') {
           const words = line.text.split(' ');
           const activeWordIdx = Math.floor(progress * words.length);
           return words.map((w, i) => (
-              <span key={i} style={{ color: i <= activeWordIdx ? theme.active_text_color : theme.text_color }}>
+              <span key={i} style={{ color: i <= activeWordIdx ? currentTheme.active_text_color : currentTheme.text_color }}>
                   {w}{' '}
               </span>
           ));
-      } else if (theme.highlight_mode === 'character') {
+      } else if (currentTheme.highlight_mode === 'character') {
           const chars = line.text.split('');
           const activeCharIdx = Math.floor(progress * chars.length);
           return chars.map((c, i) => (
-              <span key={i} style={{ color: i <= activeCharIdx ? theme.active_text_color : theme.text_color }}>
+              <span key={i} style={{ color: i <= activeCharIdx ? currentTheme.active_text_color : currentTheme.text_color }}>
                   {c}
               </span>
           ));
@@ -173,9 +162,9 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     const checkApi = async () => {
       try {
-        const resp = await fetch('http://localhost:8000/api/songs');
+        const resp = await fetch(`${API_BASE_URL}/api/songs`);
         if (resp.ok) setApiError(null);
-      } catch (err) {
+      } catch {
         setApiError('Backend server unreachable. Please start the API using .\\venv\\Scripts\\python.exe -m src.api.main');
       }
     };
@@ -188,13 +177,13 @@ export const Dashboard: React.FC = () => {
     setSelectedSong(slug);
     try {
       // 1. Get file paths
-      const resp = await fetch(`http://localhost:8000/api/songs/${slug}`);
+      const resp = await fetch(`${API_BASE_URL}/api/songs/${slug}`);
       const paths = await resp.json();
       setSongPaths(paths);
 
       // 2. Fetch and parse lyrics into Clips (Auto-embedding)
       if (paths.lyrics) {
-        const lyrResp = await fetch(`http://localhost:8000/api/download_raw?path=${paths.lyrics}`);
+        const lyrResp = await fetch(`${API_BASE_URL}/api/download_raw?path=${paths.lyrics}`);
         const lyrData = await lyrResp.json();
         setSongMetadata({
           title: lyrData.title || slug,
@@ -204,22 +193,17 @@ export const Dashboard: React.FC = () => {
         if (lyrData.lyrics && Array.isArray(lyrData.lyrics)) {
           const rawLyrics = lyrData.lyrics;
           const newClips: LyricClip[] = [];
-          let lastEndTime = 0;
 
           for (let i = 0; i < rawLyrics.length; i++) {
             const current = rawLyrics[i];
             if (current.text === "") continue;
 
             let startTime = current.time;
-            
-            // If this is an 'untimed' lyric (0.0) but it's not the very first line,
-            // or if it's stacking with the previous one, stagger it.
             if (i > 0 && startTime <= newClips[newClips.length - 1].start_time) {
-              startTime = newClips[newClips.length - 1].end_time + 0.5; // Gap of 0.5s
+              startTime = newClips[newClips.length - 1].end_time + 0.5;
             }
 
-            let endTime = startTime + 2.0; // Default 2s duration
-            
+            let endTime = startTime + 2.0;
             if (i + 1 < rawLyrics.length) {
               const nextTime = rawLyrics[i + 1].time;
               if (nextTime > startTime) {
@@ -233,7 +217,6 @@ export const Dashboard: React.FC = () => {
               end_time: endTime,
               text: current.text
             });
-            lastEndTime = endTime;
           }
           setClips(newClips);
         }
@@ -241,14 +224,14 @@ export const Dashboard: React.FC = () => {
 
       // 3. Load theme if exists
       if (paths.theme) {
-        const themeResp = await fetch(`http://localhost:8000/api/download_raw?path=${paths.theme}`);
+        const themeResp = await fetch(`${API_BASE_URL}/api/download_raw?path=${paths.theme}`);
         const themeData = await themeResp.json();
         setTheme({ ...DEFAULTS, ...themeData });
       } else {
         setTheme(DEFAULTS);
       }
-    } catch (err) {
-      console.error('Failed to load song details:', err);
+    } catch {
+      console.error('Failed to load song details');
     }
   };
 
@@ -259,19 +242,19 @@ export const Dashboard: React.FC = () => {
       formData.append('slug', selectedSong);
       formData.append('background', file);
       
-      const resp = await fetch('http://localhost:8000/api/upload', {
+      const resp = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
         body: formData,
       });
       
       if (resp.ok) {
         // Refresh song paths to show new background in preview
-        const pathsResp = await fetch(`http://localhost:8000/api/songs/${selectedSong}`);
+        const pathsResp = await fetch(`${API_BASE_URL}/api/songs/${selectedSong}`);
         const paths = await pathsResp.json();
         setSongPaths(paths);
       }
-    } catch (err) {
-      console.error('Failed to update background:', err);
+    } catch {
+      console.error('Failed to update background');
     }
   };
 
@@ -287,7 +270,7 @@ export const Dashboard: React.FC = () => {
     setRenderProgress(0);
     setJobId(null);
     try {
-      const resp = await fetch('http://localhost:8000/api/generate', {
+      const resp = await fetch(`${API_BASE_URL}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -299,10 +282,9 @@ export const Dashboard: React.FC = () => {
       const data = await resp.json();
       setJobId(data.job_id);
       
-      // Start polling for status
       const poll = setInterval(async () => {
         try {
-          const statusResp = await fetch(`http://localhost:8000/api/status/${data.job_id}`);
+          const statusResp = await fetch(`${API_BASE_URL}/api/status/${data.job_id}`);
           const statusData = await statusResp.json();
           
           setRenderProgress(statusData.progress || 0);
@@ -312,12 +294,12 @@ export const Dashboard: React.FC = () => {
             setIsExporting(false);
             if (statusData.status === 'failed') alert('Export failed: ' + statusData.error);
           }
-        } catch (err) {
-          console.error('Polling failed:', err);
+        } catch {
+          console.error('Polling failed');
         }
       }, 1000);
-    } catch (err) {
-      console.error('Export failed:', err);
+    } catch {
+      console.error('Export failed');
       setIsExporting(false);
     }
   };
@@ -330,7 +312,6 @@ export const Dashboard: React.FC = () => {
       lyrics: clips.map(c => ({ time: c.start_time, text: c.text })),
       theme: theme
     };
-    // Append end marker based on last clip
     if (clips.length > 0) {
       payload.lyrics.push({ time: clips[clips.length - 1].end_time, text: "" });
     }
@@ -341,13 +322,13 @@ export const Dashboard: React.FC = () => {
       formData.append('lyrics', blob, `${selectedSong}.json`);
       formData.append('slug', selectedSong);
       
-      await fetch('http://localhost:8000/api/upload', {
+      await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
         body: formData,
       });
       alert('Lyrics and Theme saved successfully');
-    } catch (err) {
-      console.error('Failed to save lyrics:', err);
+    } catch {
+      console.error('Failed to save lyrics');
     }
   };
 
@@ -385,7 +366,7 @@ export const Dashboard: React.FC = () => {
             {isExporting ? `Generating (${renderProgress}%)` : 'Export Video'}
           </Button>
           {jobId && !isExporting && (
-            <a href={`http://localhost:8000/api/download/${jobId}`} download>
+            <a href={`${API_BASE_URL}/api/download/${jobId}`} download>
               <Button variant="ghost" size="sm" className="success-btn"><Download size={14} /> Download</Button>
             </a>
           )}
@@ -431,7 +412,7 @@ export const Dashboard: React.FC = () => {
                     {songPaths?.background && (
                       <video 
                         ref={bgVideoRef}
-                        src={`http://localhost:8000/api/download_raw?path=${songPaths.background}`}
+                        src={`${API_BASE_URL}/api/download_raw?path=${songPaths.background}`}
                         autoPlay 
                         loop 
                         muted 
@@ -452,7 +433,7 @@ export const Dashboard: React.FC = () => {
                     {theme.logo_path && (
                       <div className="preview-logo-container" style={{ textAlign: theme.logo_h_align }}>
                         <img 
-                          src={`http://localhost:8000/api/download_raw?path=${theme.logo_path}`} 
+                          src={`${API_BASE_URL}/api/download_raw?path=${theme.logo_path}`} 
                           alt="Logo"
                           style={{ width: `${theme.logo_width / 4}px`, height: 'auto' }}
                           onError={(e) => (e.currentTarget.style.display = 'none')}
@@ -531,8 +512,8 @@ export const Dashboard: React.FC = () => {
           <div className="timeline-area">
              <Card title="Professional Video Editor" className="panel-card timeline-card">
                 <WebTimeline 
-                  audioUrl={songPaths?.audio ? `http://localhost:8000/api/download_raw?path=${songPaths.audio}` : undefined}
-                  bgUrl={songPaths?.background ? `http://localhost:8000/api/download_raw?path=${songPaths.background}` : undefined}
+                  audioUrl={songPaths?.audio ? `${API_BASE_URL}/api/download_raw?path=${songPaths.audio}` : undefined}
+                  bgUrl={songPaths?.background ? `${API_BASE_URL}/api/download_raw?path=${songPaths.background}` : undefined}
                   clips={clips}
                   onClipChange={setClips}
                   onTimeUpdate={setCurrentTime}

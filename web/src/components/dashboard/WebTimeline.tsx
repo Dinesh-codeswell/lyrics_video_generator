@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Play, Pause, SkipBack, Trash2, Milestone, ChevronLeft, ChevronRight, GripVertical, Plus, Video, Scissors } from 'lucide-react';
+import { Play, Pause, SkipBack, ChevronLeft, ChevronRight, Plus, Video, Scissors } from 'lucide-react';
 import { Button } from '../ui/Button';
 import type { LyricClip } from '../../types';
 import './WebTimeline.css';
@@ -34,7 +34,6 @@ const TimelineRuler: React.FC<{ duration: number; zoom: number }> = ({ duration,
       </div>
     );
     
-    // Add a minor tick in between if there's space
     if (zoom > 100) {
       const minorT = t + (majorTickFreq / 2);
       if (minorT <= duration) {
@@ -88,6 +87,7 @@ export const WebTimeline: React.FC<WebTimelineProps> = ({
   onTimeUpdate
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -146,7 +146,7 @@ export const WebTimeline: React.FC<WebTimelineProps> = ({
     return () => {
       ws.destroy();
     };
-  }, []); // Empty dependency array = ONLY once on mount
+  }, []);
 
   // 2. Handle Audio URL changes
   useEffect(() => {
@@ -230,21 +230,16 @@ export const WebTimeline: React.FC<WebTimelineProps> = ({
     if (!wavesurferRef.current) return;
     const time = wavesurferRef.current.getCurrentTime();
     
-    // Find the clip under the playhead
     const targetIdx = clipsRef.current.findIndex(c => time > c.start_time && time < c.end_time);
-    
     if (targetIdx !== -1) {
       const target = clipsRef.current[targetIdx];
       const newClips = [...clipsRef.current];
-      
-      // Create two new clips from the target
       const clip1 = { ...target, end_time: time };
       const clip2 = { 
         ...target, 
         id: `clip-split-${Math.random().toString(36).substr(2, 9)}`,
         start_time: time 
       };
-      
       newClips.splice(targetIdx, 1, clip1, clip2);
       onClipChange(newClips);
     }
@@ -253,12 +248,7 @@ export const WebTimeline: React.FC<WebTimelineProps> = ({
   const handleStamp = () => {
     if (!wavesurferRef.current) return;
     const time = wavesurferRef.current.getCurrentTime();
-    
     const newClips = [...clipsRef.current];
-    // Find first clip that is 'untimed' (we'll define untimed as start_time < 0.01 and duration exactly 2.0 from our auto-embedder)
-    // or just the first clip that hasn't been moved yet.
-    // Better: find the first clip that starts AFTER the last correctly timed clip.
-    // For now, let's use the first one that is at time 0.
     const idx = newClips.findIndex(c => c.start_time === 0);
     if (idx !== -1) {
       const dur = 3.0;
@@ -288,12 +278,9 @@ export const WebTimeline: React.FC<WebTimelineProps> = ({
   };
 
   const duration = wavesurferRef.current?.getDuration() || 0;
-
-  // Determine active clip for the split tool
   const activeIndex = clips.findIndex(c => currentTime >= c.start_time && currentTime < c.end_time);
 
   const handleTrackDoubleClick = (e: React.MouseEvent) => {
-    // Only if not double-clicking a clip
     if ((e.target as HTMLElement).classList.contains('clips-area')) {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const x = e.clientX - rect.left + (scrollRef.current?.scrollLeft || 0);
@@ -324,7 +311,6 @@ export const WebTimeline: React.FC<WebTimelineProps> = ({
 
   return (
     <div className="web-timeline nle-editor">
-      {/* Modals */}
       {addingAtTime !== null && (
         <EditLyricModal 
           title="Add New Lyric" 
@@ -372,13 +358,10 @@ export const WebTimeline: React.FC<WebTimelineProps> = ({
         </div>
       </div>
       
-      <div className="timeline-scroller">
+      <div className="timeline-scroller" ref={scrollRef}>
         <div className="tracks-container" style={{ width: isReady ? duration * zoom : '100%' }}>
-          
-          {/* Time Ruler */}
           <TimelineRuler duration={duration} zoom={zoom} />
 
-          {/* Video Track */}
           <div className="track video-track">
             <div className="track-label">VIDEO</div>
             <div className="clips-area">
@@ -392,7 +375,7 @@ export const WebTimeline: React.FC<WebTimelineProps> = ({
                 >
                   <div className="clip-content">
                     <Video size={12} />
-                    <span className="clip-text">Background: {bgUrl.split('path=')[1] || 'Default'}</span>
+                    <span className="clip-text">Background Video</span>
                   </div>
                   <button className="change-bg-btn" onClick={() => document.getElementById('nle-bg-input')?.click()} title="Change Background">
                     <Plus size={12} />
@@ -411,7 +394,6 @@ export const WebTimeline: React.FC<WebTimelineProps> = ({
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    // Logic to handle upload will be in Dashboard.tsx
                     const event = new CustomEvent('nle-bg-upload', { detail: file });
                     window.dispatchEvent(event);
                   }
@@ -420,13 +402,11 @@ export const WebTimeline: React.FC<WebTimelineProps> = ({
             </div>
           </div>
 
-          {/* Audio Track */}
           <div className="track audio-track">
             <div className="track-label">AUDIO</div>
             <div className="waveform-wrapper" ref={containerRef}></div>
           </div>
 
-          {/* Lyrics Track */}
           <div className="track lyrics-track">
             <div className="track-label">LYRICS</div>
             <div className="clips-area" onDoubleClick={handleTrackDoubleClick}>
@@ -451,7 +431,6 @@ export const WebTimeline: React.FC<WebTimelineProps> = ({
             </div>
           </div>
 
-          {/* Playhead Line */}
           <div className="playhead-line" style={{ left: `${currentTime * zoom}px` }}></div>
         </div>
       </div>

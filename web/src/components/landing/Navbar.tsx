@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '../ui/Button';
 import './Navbar.css';
 
 export const Navbar: React.FC = () => {

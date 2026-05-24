@@ -3,6 +3,9 @@ import { Music, Upload, RefreshCw, FileJson, Video, Plus, X, Sparkles, Trash2, S
 import { Button } from '../ui/Button';
 import './SongSelector.css';
 
+// Environment-aware API URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 interface Song {
   name: string;
   has_lyrics: boolean;
@@ -39,8 +42,8 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
     setLoading(true);
     try {
       const [songsResp, bgResp] = await Promise.all([
-        fetch('http://localhost:8000/api/songs'),
-        fetch('http://localhost:8000/api/backgrounds')
+        fetch(`${API_BASE_URL}/api/songs`),
+        fetch(`${API_BASE_URL}/api/backgrounds`)
       ]);
       const songsData = await songsResp.json();
       const bgData = await bgResp.json();
@@ -57,11 +60,6 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
     fetchSongs();
   }, []);
 
-  const handleSelect = (slug: string) => {
-    setSelectedSlug(slug);
-    onSelect(slug);
-  };
-
   const handleEdit = (song: Song) => {
     setSongName(song.name);
     setIsEditing(true);
@@ -75,7 +73,7 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
     }
 
     try {
-      const resp = await fetch(`http://localhost:8000/api/songs/${slug}`, {
+      const resp = await fetch(`${API_BASE_URL}/api/songs/${slug}`, {
         method: 'DELETE'
       });
       if (resp.ok) {
@@ -111,7 +109,7 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
         formData.append('background_preset', selectedBackground);
       }
 
-      const resp = await fetch('http://localhost:8000/api/upload', {
+      const resp = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -158,7 +156,6 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
       artist: newArtist,
       lyrics: lines.map(text => ({ time: 0, text }))
     };
-    // Append end marker
     payload.lyrics.push({ time: 0, text: "" });
 
     try {
@@ -167,7 +164,7 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
       formData.append('lyrics', blob, `${slug}.json`);
       formData.append('slug', slug);
       
-      const resp = await fetch('http://localhost:8000/api/upload', {
+      const resp = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -190,15 +187,15 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
   };
 
   const handleAIGenerate = async (e: React.MouseEvent, slug: string) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     setLoadingAI(slug);
     try {
-      const resp = await fetch(`http://localhost:8000/api/auto-lyrics/${slug}`, {
+      const resp = await fetch(`${API_BASE_URL}/api/auto-lyrics/${slug}`, {
         method: 'POST'
       });
       if (resp.ok) {
         fetchSongs();
-        onSelect(slug); // Auto-load after generation
+        onSelect(slug);
       } else {
         const err = await resp.json();
         alert('AI Error: ' + err.detail);
@@ -385,7 +382,7 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
                       className={`bg-option ${selectedBackground === bg ? 'selected' : ''}`}
                       onClick={() => {
                         setSelectedBackground(bg);
-                        setBgFile(null); // Clear custom file if preset selected
+                        setBgFile(null);
                       }}
                       title={bg}
                     >
@@ -396,7 +393,6 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
                     </div>
                   ))}
                   
-                  {/* Custom Upload (+) Button */}
                   <div 
                     className={`bg-option custom-add ${bgFile ? 'selected' : ''}`}
                     onClick={() => document.getElementById('custom-bg-input')?.click()}
@@ -414,7 +410,7 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
                         const file = e.target.files?.[0] || null;
                         if (file) {
                           setBgFile(file);
-                          setSelectedBackground(null); // Clear preset if custom selected
+                          setSelectedBackground(null);
                         }
                       }}
                     />
