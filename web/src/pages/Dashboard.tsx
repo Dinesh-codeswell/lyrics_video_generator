@@ -10,6 +10,9 @@ import { DEFAULTS } from '../types';
 import type { Theme, LyricClip } from '../types';
 import './Dashboard.css';
 
+// Environment-aware API URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export const Dashboard: React.FC = () => {
   const [selectedSong, setSelectedSong] = useState<string | null>(null);
   const [songPaths, setSongPaths] = useState<any>(null);
