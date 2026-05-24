@@ -35,7 +35,7 @@ export const BlogDetail: React.FC = () => {
             if (line.startsWith('### ')) return <h3 key={i}>{line.replace('### ', '')}</h3>;
             if (line.startsWith('![')) {
               const alt = line.match(/\[(.*?)\]/)?.[1];
-              const src = line.match(/\((.*?)\)/)?.[1];
+              const src = line.substring(line.lastIndexOf('(') + 1, line.lastIndexOf(')'));
               return <img key={i} src={src} alt={alt} className="post-inline-img" />;
             }
             if (line.startsWith('* ')) return <li key={i}>{line.replace('* ', '')}</li>;
