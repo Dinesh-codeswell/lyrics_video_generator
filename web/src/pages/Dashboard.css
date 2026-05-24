@@ -3,7 +3,7 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden; /* Force containment in one frame */
   background-color: var(--midnight-ink);
 }
 
@@ -41,6 +41,7 @@
   display: flex;
   padding: 8px;
   gap: 8px;
+  min-height: 0; /* Important for flex containment */
 }
 
 .dashboard-main {
@@ -49,10 +50,11 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  min-height: 0;
 }
 
 .top-row {
-  height: 440px;
+  height: 380px; /* Reduced height as requested */
   display: flex;
   gap: 8px;
   flex-shrink: 0;
@@ -61,11 +63,16 @@
 .left-sidebar {
   width: 280px;
   flex-shrink: 0;
+  height: 100%;
 }
 
 .right-sidebar {
   width: 360px;
   flex-shrink: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -80,7 +87,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden; /* CRITICAL: Master frame clipping */
+  overflow: hidden; 
   position: relative;
 }
 
@@ -89,7 +96,7 @@
   width: 100%;
   max-width: 100%;
   max-height: 100%;
-  overflow: hidden; /* Sub-clipping */
+  overflow: hidden; 
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
@@ -200,7 +207,7 @@
 
 .timeline-area {
   flex: 1;
-  min-height: 240px;
+  min-height: 0;
 }
 
 .unified-editor-container {
@@ -211,13 +218,33 @@
   overflow: hidden;
 }
 
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Scrolling Fixes for Sidebars */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+.panel-card.scrollable {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-card.scrollable .card-content {
+  flex: 1;
+  overflow-y: auto; /* Restore inner scrolling */
+  min-height: 0;
+}
+
 /* Responsive Overrides */
 @media (max-width: 1024px) {
+  .dashboard {
+    overflow-y: auto;
+  }
   .dashboard-layout {
     flex-direction: column;
   }
   .left-sidebar, .right-sidebar {
     width: 100%;
+    height: auto;
   }
   .top-row {
     flex-direction: column;
