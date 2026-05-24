@@ -11,7 +11,11 @@ import type { Theme, LyricClip } from '../types';
 import './Dashboard.css';
 
 // Environment-aware API URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const isProd = import.meta.env.PROD;
+const API_BASE_URL = import.meta.env.VITE_API_URL || (isProd ? window.location.origin : 'http://localhost:8000');
+
+const PRODUCTION_ERROR = 'Connecting to production services... This may take a moment if the server is waking up.';
+const DEVELOPMENT_ERROR = 'Backend server unreachable. Please start the API using .\\venv\\Scripts\\python.exe -m src.api.main';
 
 export const Dashboard: React.FC = () => {
   const [selectedSong, setSelectedSong] = useState<string | null>(null);
@@ -173,8 +177,9 @@ export const Dashboard: React.FC = () => {
       try {
         const resp = await fetch(`${API_BASE_URL}/api/songs`);
         if (resp.ok) setApiError(null);
+        else throw new Error();
       } catch {
-        setApiError('Backend server unreachable. Please start the API using .\\venv\\Scripts\\python.exe -m src.api.main');
+        setApiError(isProd ? PRODUCTION_ERROR : DEVELOPMENT_ERROR);
       }
     };
     checkApi();
