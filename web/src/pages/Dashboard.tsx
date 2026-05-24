@@ -456,7 +456,7 @@ export const Dashboard: React.FC = () => {
                         <div 
                           className="preview-scroller-inner"
                           style={{ 
-                            transform: `translateY(${(STAGE_HEIGHT / 2) - scrollOffset}px)`,
+                            transform: `translateY(${(stageHeight / 2) - scrollOffset}px)`,
                             transition: `transform ${0.3 / theme.animation_speed}s linear`
                           }}
                         >
