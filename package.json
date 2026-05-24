@@ -3,9 +3,9 @@
   "version": "0.1.2",
   "private": true,
   "scripts": {
+    "install": "cd web && npm install",
+    "build": "cd web && npm run build",
     "web:dev": "cd web && npm run dev",
-    "web:build": "cd web && npm run build",
-    "web:install": "cd web && npm install",
     "api:start": "python -m src.api.main"
   }
 }
