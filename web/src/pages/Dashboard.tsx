@@ -27,6 +27,26 @@ export const Dashboard: React.FC = () => {
   const bgVideoRef = useRef<HTMLVideoElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
 
+  // Dynamic Scaling State
+  const [previewDimensions, setPreviewDimensions] = useState({ width: 0, height: 0 });
+  const previewScale = previewDimensions.width / 1920 || 0.5;
+  const stageHeight = previewDimensions.height || 540;
+  const lineHeight = 240 * previewScale;
+
+  useEffect(() => {
+    if (!stageRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setPreviewDimensions({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height
+        });
+      }
+    });
+    observer.observe(stageRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   const toggleFullScreen = () => {
     if (stageRef.current) {
       if (!document.fullscreenElement) {
@@ -36,17 +56,6 @@ export const Dashboard: React.FC = () => {
       }
     }
   };
-
-  // Sync background video with playhead
-  useEffect(() => {
-    if (bgVideoRef.current) {
-      // In a real NLE, we might seek to (currentTime % bgDuration)
-      // but for music video vibes, continuous loop is often preferred.
-    }
-  }, [currentTime]);
-
-  // Constants for scrolling (mirrored from backend)
-  const STAGE_HEIGHT = 540; // 1080 / 2 for dashboard preview scale
 
   // Determine active lyric index (for highlighting ONLY)
   const activeIndex = React.useMemo(() => {
@@ -74,19 +83,19 @@ export const Dashboard: React.FC = () => {
     }
 
     const i = lastStartedIndex;
-    if (i >= clips.length - 1) return i * 120;
+    if (i >= clips.length - 1) return i * lineHeight;
 
     const currentClip = clips[i];
     const nextClip = clips[i + 1];
     const totalGap = nextClip.start_time - currentClip.start_time;
     
-    if (totalGap <= 0) return i * 120;
+    if (totalGap <= 0) return i * lineHeight;
 
     const progress = (currentTime - currentClip.start_time) / totalGap;
-    return (i + progress) * 120;
-  }, [currentTime, clips, lastStartedIndex]);
+    return (i + progress) * lineHeight;
+  }, [currentTime, clips, lastStartedIndex, lineHeight]);
 
-  // Logic to get visible lines (Memoized using lastStartedIndex to prevent snapping)
+  // Logic to get visible lines
   const visibleLines = React.useMemo(() => {
     if (!selectedSong || !clips.length) return [];
     
@@ -100,25 +109,25 @@ export const Dashboard: React.FC = () => {
       lines.push({
         ...clips[i],
         index: i,
-        y: i * 120 
+        y: i * lineHeight 
       });
     }
     return lines;
-  }, [selectedSong, clips, lastStartedIndex]);
+  }, [selectedSong, clips, lastStartedIndex, lineHeight]);
 
   // --- Animation Helpers ---
   const getLineStyles = (isCurrent: boolean, currentTheme: Theme): React.CSSProperties => ({
-    fontSize: `${currentTheme.font_size / 2}px`, 
+    fontSize: `${currentTheme.font_size * previewScale}px`, 
     color: isCurrent && currentTheme.highlight_mode === 'line' ? currentTheme.active_text_color : currentTheme.text_color,
     fontFamily: currentTheme.font_family,
     textAlign: currentTheme.lyric_position,
     fontWeight: (isCurrent && currentTheme.active_text_bold) ? 'bold' : 'normal',
-    textShadow: (isCurrent && currentTheme.active_text_glow) ? `0 0 10px ${currentTheme.active_glow_color || currentTheme.active_text_color}` : 'none',
-    WebkitTextStroke: isCurrent ? `${currentTheme.active_text_stroke_width / 2}px ${currentTheme.active_text_stroke_color}` : 'none',
-    letterSpacing: `${currentTheme.letter_spacing / 2}px`,
-    maxWidth: `${currentTheme.column_width / 2}px`,
+    textShadow: (isCurrent && currentTheme.active_text_glow) ? `0 0 ${20 * previewScale}px ${currentTheme.active_glow_color || currentTheme.active_text_color}` : 'none',
+    WebkitTextStroke: isCurrent ? `${currentTheme.active_text_stroke_width * previewScale}px ${currentTheme.active_text_stroke_color}` : 'none',
+    letterSpacing: `${currentTheme.letter_spacing * previewScale}px`,
+    maxWidth: `${currentTheme.column_width * previewScale}px`,
     width: '100%',
-    padding: '0 20px',
+    padding: `0 ${40 * previewScale}px`,
   });
 
   const renderLineText = (line: LyricClip, isCurrent: boolean, currentTheme: Theme, time: number, activeClip: LyricClip) => {

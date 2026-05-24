@@ -57,7 +57,6 @@
   font-weight: 500;
   flex-shrink: 0;
 }
-
 .dashboard-layout {
   flex: 1;
   display: flex;
@@ -66,7 +65,52 @@
   overflow: hidden;
 }
 
+@media (max-width: 1024px) {
+  .dashboard-layout {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .left-sidebar, .right-sidebar {
+    width: 100% !important;
+    height: auto !important;
+    flex-shrink: 1;
+  }
+
+  .top-row {
+    flex-direction: column;
+    height: auto !important;
+    flex: none !important;
+  }
+
+  .preview-area {
+    aspect-ratio: 16/9;
+    height: auto !important;
+  }
+
+  .timeline-area {
+    min-height: 300px;
+    flex: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .header-left .divider, .header-left .song-title-display {
+    display: none;
+  }
+
+  .header-right .toolbar-group {
+    display: none;
+  }
+
+  .dashboard-header {
+    padding: 0 8px;
+  }
+}
+
 .dashboard-main {
+...
+
   flex: 1;
   display: flex;
   flex-direction: column;
