@@ -1,0 +1,125 @@
+.creators-micro {
+  padding: 120px 24px;
+  background-color: var(--color-canvas-white);
+}
+
+.creators-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.creators-layout {
+  display: flex;
+  align-items: center;
+  gap: 80px;
+}
+
+.creators-visual {
+  flex: 1;
+  position: relative;
+}
+
+.creators-img {
+  width: 100%;
+  border-radius: var(--radius-cards);
+  box-shadow: var(--shadow-xl);
+}
+
+.creators-quote-card {
+  position: absolute;
+  bottom: -40px;
+  right: -40px;
+  background-color: white;
+  padding: 24px;
+  border-radius: var(--radius-cards);
+  box-shadow: var(--shadow-md);
+  max-width: 320px;
+  border: 1px solid var(--color-border-gray);
+}
+
+.quote-text {
+  font-family: var(--font-haffer);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--color-inkwell);
+  font-style: italic;
+  margin-bottom: 16px;
+}
+
+.quote-author {
+  display: flex;
+  flex-direction: column;
+}
+
+.author-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-inkwell);
+}
+
+.author-role {
+  font-size: 11px;
+  color: var(--color-subtle-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.creators-info {
+  flex: 1;
+}
+
+.creators-title {
+  font-family: var(--font-haffer);
+  font-size: 48px;
+  font-weight: 800;
+  color: var(--color-inkwell);
+  letter-spacing: -1px;
+  line-height: 1.1;
+  margin-bottom: 24px;
+}
+
+.text-accent-blue {
+  color: var(--color-midnight-blue);
+}
+
+.creators-description {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--color-subtle-gray);
+  margin-bottom: 32px;
+}
+
+.creators-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.creators-list li {
+  display: flex;
+  gap: 12px;
+  font-size: 15px;
+  color: var(--color-inkwell);
+  line-height: 1.4;
+}
+
+.list-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-midnight-blue);
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .creators-layout {
+    flex-direction: column;
+    gap: 100px;
+  }
+  .creators-quote-card {
+    right: 20px;
+  }
+}

@@ -1,0 +1,357 @@
+.song-selector {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 12px;
+}
+
+.selector-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.import-btn {
+  flex: 1;
+}
+
+.song-list {
+  flex: 1;
+  background-color: var(--midnight-ink);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--steel-border);
+  overflow-y: auto;
+}
+
+.song-item {
+  padding: 12px;
+  border-bottom: 1px solid var(--steel-border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.song-item:hover:not(.incomplete) {
+  background-color: var(--deep-graphite);
+}
+
+.song-item:hover .action-icon-btn {
+  opacity: 1;
+}
+
+.song-item.selected {
+  background-color: var(--slate-card);
+  border-left: 2px solid var(--electric-blue);
+}
+
+.song-item.incomplete {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.song-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.song-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.action-icon-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  color: var(--soft-stone);
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-icon-btn:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--white-canvas);
+}
+
+.action-icon-btn.delete:hover {
+  color: var(--error-red);
+  background-color: rgba(226, 71, 86, 0.1);
+}
+
+.song-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.song-actions {
+  display: flex;
+  align-items: center;
+}
+
+.ai-magic-btn {
+  background-color: var(--color-lavender-haze);
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(191, 137, 205, 0.3);
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.ai-magic-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(191, 137, 205, 0.5);
+  filter: brightness(1.1);
+}
+
+.ai-magic-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ai-magic-btn .btn-label {
+  transition: max-width 0.3s ease;
+}
+
+.ai-magic-btn.loading {
+  background-color: var(--soft-stone);
+  box-shadow: none;
+}
+
+.song-name {
+  font-weight: 500;
+  color: var(--white-canvas);
+}
+
+.song-status {
+  display: flex;
+  gap: 8px;
+}
+
+.song-status .ready {
+  color: var(--success-green);
+}
+
+.song-status .missing {
+  color: var(--error-red);
+}
+
+/* Modal Styling */
+.import-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.import-modal {
+  background-color: var(--deep-graphite);
+  border: 1px solid var(--steel-border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 480px;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.modal-header h3 {
+  font-size: 18px;
+  color: var(--white-canvas);
+}
+
+.import-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 12px;
+  color: var(--silver-whisper);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.form-group input[type="text"], .form-group textarea {
+  background-color: var(--slate-card);
+  border: 1px solid var(--steel-border);
+  color: var(--white-canvas);
+  padding: 8px 12px;
+  border-radius: 4px;
+  outline: none;
+  font-family: var(--font-primary);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+}
+
+.form-group input[type="text"]:focus, .form-group textarea:focus {
+  border-color: var(--electric-blue);
+}
+
+.form-group input[type="file"] {
+  font-size: 13px;
+  color: var(--silver-whisper);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.ai-magic-option {
+  margin: 8px 0;
+  padding: 12px;
+  background: rgba(191, 137, 205, 0.05);
+  border: 1px solid rgba(191, 137, 205, 0.2);
+  border-radius: 8px;
+}
+
+.magic-highlight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-lavender-haze);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.magic-highlight input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-lavender-haze);
+}
+
+.form-group.separator {
+  margin: 16px 0;
+  position: relative;
+  text-align: center;
+}
+
+.form-group.separator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: var(--steel-border);
+  z-index: 1;
+}
+
+.divider-text {
+  position: relative;
+  z-index: 2;
+  background-color: var(--deep-graphite);
+  padding: 0 12px;
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--soft-stone);
+  letter-spacing: 0.1em;
+}
+
+/* Background Selector Grid */
+.bg-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.bg-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bg-preview-box {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background-color: var(--midnight-ink);
+  border: 1px solid var(--steel-border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--soft-stone);
+  transition: all 0.2s ease;
+}
+
+.bg-option:hover .bg-preview-box {
+  border-color: var(--silver-whisper);
+  color: var(--white-canvas);
+  background-color: var(--slate-card);
+}
+
+.bg-option.selected .bg-preview-box {
+  border-color: var(--electric-blue);
+  background-color: rgba(131, 195, 255, 0.1);
+  color: var(--electric-blue);
+  box-shadow: 0 0 10px rgba(131, 195, 255, 0.2);
+}
+
+.bg-name {
+  font-size: 10px;
+  color: var(--silver-whisper);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.bg-option.selected .bg-name {
+  color: var(--electric-blue);
+  font-weight: 600;
+}
+
+.custom-add .bg-preview-box {
+  border: 1px dashed var(--soft-stone);
+}
+
+.bg-preview-box .ready {
+  color: var(--success-green);
+}

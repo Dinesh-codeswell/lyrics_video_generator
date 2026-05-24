@@ -33,10 +33,10 @@ class AudioPlayer(QObject):
     # Public API
     # ------------------------------------------------------------------
 
-    def load(self, path: str) -> None:
+    def load(self, path: str | Path) -> None:
         """Load an audio file. Stops any current playback."""
         self._player.stop()
-        self._player.setSource(QUrl.fromLocalFile(path))
+        self._player.setSource(QUrl.fromLocalFile(str(path)))
 
     def play(self) -> None:
         self._player.play()

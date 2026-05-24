@@ -58,8 +58,8 @@ class MainWindow(QMainWindow):
 
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(4)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
 
         layout.addWidget(self._build_central_widget(), stretch=1)
         layout.addWidget(TransportControls(self._audio_player))
@@ -307,12 +307,15 @@ class MainWindow(QMainWindow):
 
         if audio:
             self._audio_player.load(audio)
-        self._timeline.load_song(paths)
-        self._preview.song_loaded(paths)
-        self._export_bar.song_loaded(paths)
+        
+        # Ensure all paths are strings for components that might not handle Path objects
+        str_paths = {k: str(v) if v else None for k, v in paths.items()}
+        self._timeline.load_song(str_paths)
+        self._preview.song_loaded(str_paths)
+        self._export_bar.song_loaded(str_paths)
 
         # Auto-load per-song theme
-        theme_path = paths.get("theme")
+        theme_path = str_paths.get("theme")
         if theme_path:
             self._theme_editor.load_theme_file(theme_path)
         else:

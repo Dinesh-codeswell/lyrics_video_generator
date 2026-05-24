@@ -26,8 +26,13 @@ env/
 # Claude Code local session files (contain personal paths and permissions)
 .claude/
 
+# Web
+web/node_modules/
+web/dist/
+
 # Output
 output/
+*.mp4
 
 # Input feedstock (keep folder structure via .gitkeep)
 input/audio/*

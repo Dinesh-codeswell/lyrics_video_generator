@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core.song_resolver import INPUT_LYRICS_DIR
+from src.gui.styles import TOKENS
 
 
 def _derive_slug(title: str) -> str:
@@ -98,7 +99,7 @@ class NewSongDialog(QDialog):
         form.addRow("Filename slug:", self._slug_edit)
 
         slug_hint = QLabel("Saved to input/lyrics/<slug>.json")
-        slug_hint.setStyleSheet("color: #888; font-size: 11px;")
+        slug_hint.setProperty("secondary", "true")
         form.addRow("", slug_hint)
 
         layout.addLayout(form)
@@ -111,10 +112,11 @@ class NewSongDialog(QDialog):
             "Paste or type lyrics here.\n\nOne lyric line per line."
         )
         self._lyrics_edit.setMinimumHeight(240)
+        self._lyrics_edit.setStyleSheet(f"background-color: {TOKENS['slate_card']}; border: 1px solid {TOKENS['steel_border']}; border-radius: {TOKENS['radius_md']};")
         layout.addWidget(self._lyrics_edit, stretch=1)
 
         gap_hint = QLabel("Blank lines are preserved as music gap markers.")
-        gap_hint.setStyleSheet("color: #888; font-size: 11px; font-style: italic;")
+        gap_hint.setProperty("secondary", "true")
         layout.addWidget(gap_hint)
 
         buttons = QDialogButtonBox(

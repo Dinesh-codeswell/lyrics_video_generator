@@ -1,0 +1,56 @@
+.landing-page-micro {
+  min-height: 100vh;
+  background-color: var(--color-canvas-white);
+  color: var(--color-inkwell);
+  font-family: var(--font-haffer);
+}
+
+.footer-micro {
+  padding: 80px 24px;
+  background-color: white;
+  border-top: 1px solid var(--color-border-gray);
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footer-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.footer-brand {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-inkwell);
+  letter-spacing: -0.5px;
+}
+
+.footer-nav {
+  display: flex;
+  gap: 32px;
+}
+
+.footer-nav a {
+  text-decoration: none;
+  font-size: 14px;
+  color: var(--color-subtle-gray);
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.footer-nav a:hover {
+  color: var(--color-inkwell);
+}
+
+.footer-bottom {
+  padding-top: 40px;
+  border-top: 1px solid var(--color-border-gray);
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-lightest-gray);
+}

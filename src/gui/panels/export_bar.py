@@ -25,6 +25,8 @@ from PyQt6.QtWidgets import (
 from src.core.theme_loader import Theme, load_theme
 from src.core.video_generator import RenderCancelled, generate_video
 
+from src.gui.styles import TOKENS
+
 _DEFAULT_OUTPUT_DIR = "output"
 _FPS_OPTIONS = ["24", "30", "60"]
 _DEFAULT_FPS = "30"
@@ -129,30 +131,37 @@ class ExportBar(QWidget):
 
     def _build_ui(self) -> None:
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(8, 4, 8, 2)
-        outer.setSpacing(2)
+        outer.setContentsMargins(12, 8, 12, 12)
+        outer.setSpacing(8)
 
         # ── Row 1: settings + buttons ──────────────────────────────
         row1 = QHBoxLayout()
-        row1.setSpacing(6)
+        row1.setSpacing(8)
 
-        row1.addWidget(QLabel("File:"))
+        file_lbl = QLabel("File:")
+        file_lbl.setProperty("secondary", "true")
+        row1.addWidget(file_lbl)
         self._filename_edit = QLineEdit("untitled.mp4")
         self._filename_edit.setFixedWidth(200)
         row1.addWidget(self._filename_edit)
 
-        row1.addWidget(QLabel("Dir:"))
+        dir_lbl = QLabel("Dir:")
+        dir_lbl.setProperty("secondary", "true")
+        row1.addWidget(dir_lbl)
         self._dir_edit = QLineEdit(_DEFAULT_OUTPUT_DIR)
         self._dir_edit.setFixedWidth(140)
         row1.addWidget(self._dir_edit)
 
         browse_btn = QPushButton("…")
+        browse_btn.setProperty("variant", "ghost")
         browse_btn.setFixedWidth(28)
         browse_btn.setToolTip("Browse output directory")
         browse_btn.clicked.connect(self._on_browse)
         row1.addWidget(browse_btn)
 
-        row1.addWidget(QLabel("FPS:"))
+        fps_lbl = QLabel("FPS:")
+        fps_lbl.setProperty("secondary", "true")
+        row1.addWidget(fps_lbl)
         self._fps_combo = QComboBox()
         self._fps_combo.addItems(_FPS_OPTIONS)
         self._fps_combo.setCurrentText(_DEFAULT_FPS)
@@ -160,18 +169,20 @@ class ExportBar(QWidget):
         row1.addWidget(self._fps_combo)
 
         res_label = QLabel("1920×1080")
-        res_label.setStyleSheet("color: gray;")
+        res_label.setProperty("secondary", "true")
         row1.addWidget(res_label)
 
         row1.addStretch()
 
         self._export_btn = QPushButton("Export Video")
+        self._export_btn.setProperty("variant", "primary")
         self._export_btn.setEnabled(False)
         self._export_btn.setFixedWidth(110)
         self._export_btn.clicked.connect(self._on_export_clicked)
         row1.addWidget(self._export_btn)
 
         self._cancel_btn = QPushButton("Cancel")
+        self._cancel_btn.setProperty("variant", "ghost")
         self._cancel_btn.setFixedWidth(64)
         self._cancel_btn.hide()
         self._cancel_btn.clicked.connect(self._on_cancel_clicked)
@@ -181,18 +192,29 @@ class ExportBar(QWidget):
 
         # ── Row 2: progress + status ───────────────────────────────
         row2 = QHBoxLayout()
-        row2.setSpacing(6)
+        row2.setSpacing(12)
 
         self._progress_bar = QProgressBar()
         self._progress_bar.setRange(0, 100)
         self._progress_bar.setValue(0)
         self._progress_bar.setTextVisible(False)
-        self._progress_bar.setFixedHeight(10)
+        self._progress_bar.setFixedHeight(8)
+        self._progress_bar.setStyleSheet(f"""
+            QProgressBar {{
+                background: {TOKENS['midnight_ink']};
+                border: 1px solid {TOKENS['steel_border']};
+                border-radius: 4px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {TOKENS['electric_blue']};
+                border-radius: 3px;
+            }}
+        """)
         row2.addWidget(self._progress_bar, stretch=1)
 
         self._status_label = QLabel("Load a song to export.")
         self._status_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self._status_label.setStyleSheet("color: gray; font-size: 11px;")
+        self._status_label.setProperty("secondary", "true")
         self._status_label.setFixedWidth(260)
         row2.addWidget(self._status_label)
 

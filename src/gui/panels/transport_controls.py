@@ -46,15 +46,17 @@ class TransportControls(QWidget):
 
     def _build_ui(self):
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(8, 2, 8, 2)
-        layout.setSpacing(6)
+        layout.setContentsMargins(12, 4, 12, 4)
+        layout.setSpacing(12)
 
         self._play_btn = QPushButton("▶")
+        self._play_btn.setProperty("variant", "ghost")
         self._play_btn.setFixedWidth(36)
         self._play_btn.setToolTip("Play / Pause")
         self._play_btn.clicked.connect(self._on_play_pause)
 
         self._stop_btn = QPushButton("■")
+        self._stop_btn.setProperty("variant", "ghost")
         self._stop_btn.setFixedWidth(36)
         self._stop_btn.setToolTip("Stop")
         self._stop_btn.setEnabled(False)
@@ -67,6 +69,7 @@ class TransportControls(QWidget):
         self._slider.sliderReleased.connect(self._on_slider_released)
 
         self._time_label = QLabel("0:00.00 / 0:00")
+        self._time_label.setProperty("secondary", "true")
         self._time_label.setFixedWidth(115)
         self._time_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 

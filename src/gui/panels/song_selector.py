@@ -55,29 +55,35 @@ class SongSelectorPanel(QGroupBox):
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
-        layout.setSpacing(6)
+        layout.setSpacing(12)
 
         self._loaded_label = QLabel("Loaded: —")
-        self._loaded_label.setStyleSheet("font-style: italic; color: #555;")
+        self._loaded_label.setProperty("secondary", "true")
         self._loaded_label.setWordWrap(True)
         layout.addWidget(self._loaded_label)
 
         self._list = QListWidget()
-        self._list.setAlternatingRowColors(True)
+        self._list.setAlternatingRowColors(False)  # Matches OpenSea flat list style
         self._list.itemDoubleClicked.connect(self._load_selected)
         layout.addWidget(self._list, stretch=1)
 
         btn_row = QHBoxLayout()
+        btn_row.setSpacing(8)
+
         refresh_btn = QPushButton("Refresh")
+        refresh_btn.setProperty("variant", "ghost")
         refresh_btn.clicked.connect(self.scan)
 
-        open_folder_btn = QPushButton("Open Input Folder")
+        open_folder_btn = QPushButton("Open Folder")
+        open_folder_btn.setProperty("variant", "ghost")
         open_folder_btn.clicked.connect(self._open_input_folder)
 
-        import_btn = QPushButton("Import Song…")
+        import_btn = QPushButton("Import…")
+        import_btn.setProperty("variant", "ghost")
         import_btn.clicked.connect(self._import_song)
 
         self._load_btn = QPushButton("Load Song")
+        self._load_btn.setProperty("variant", "primary")
         self._load_btn.setEnabled(False)
         self._load_btn.clicked.connect(self._load_selected)
 

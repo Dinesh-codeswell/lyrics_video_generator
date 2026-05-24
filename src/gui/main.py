@@ -33,6 +33,7 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 
 from src.gui.main_window import MainWindow
+from src.gui.styles import GLOBAL_STYLE
 
 
 def main():
@@ -41,20 +42,7 @@ def main():
     _icon_path = Path(__file__).parents[2] / "assets" / "icon.png"
     if _icon_path.exists():
         app.setWindowIcon(QIcon(str(_icon_path)))
-    app.setStyleSheet("""
-        QGroupBox {
-            font-size: 14pt;
-            font-weight: 600;
-            margin-top: 26px;
-        }
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            subcontrol-position: top left;
-            left: 10px;
-            top: 4px;
-            padding: 0 4px;
-        }
-    """)
+    app.setStyleSheet(GLOBAL_STYLE)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())

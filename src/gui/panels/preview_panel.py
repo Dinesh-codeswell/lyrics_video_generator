@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 
 from src.core.theme_loader import Theme, load_theme
 from src.core.video_generator import generate_video
+from src.gui.styles import TOKENS
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -38,7 +39,7 @@ class _VideoContainer(QWidget):
     def __init__(self, video_widget: QVideoWidget, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setStyleSheet("background: #2a2a2a;")
+        self.setStyleSheet(f"background: {TOKENS['midnight_ink']}; border: 1px solid {TOKENS['steel_border']}; border-radius: {TOKENS['radius_lg']};")
         self._video = video_widget
         self._video.setParent(self)
 
@@ -151,8 +152,8 @@ class PreviewPanel(QGroupBox):
 
     def _build_ui(self) -> None:
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(6, 6, 6, 6)
-        outer.setSpacing(4)
+        outer.setContentsMargins(12, 12, 12, 12)
+        outer.setSpacing(8)
 
         # --- Video widget in 16:9 container (hidden until first render) ---
         self._video_widget = QVideoWidget()
@@ -164,14 +165,16 @@ class PreviewPanel(QGroupBox):
         # --- Placeholder label ---
         self._placeholder_label = QLabel("Load a song to generate a preview.")
         self._placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._placeholder_label.setStyleSheet("color: gray; font-style: italic;")
+        self._placeholder_label.setProperty("secondary", "true")
         outer.addWidget(self._placeholder_label, stretch=1)
 
         # --- Controls bar ---
         controls = QHBoxLayout()
-        controls.setSpacing(6)
+        controls.setSpacing(8)
 
-        controls.addWidget(QLabel("Start:"))
+        start_lbl = QLabel("Start:")
+        start_lbl.setProperty("secondary", "true")
+        controls.addWidget(start_lbl)
 
         self._start_spin = QDoubleSpinBox()
         self._start_spin.setRange(0.0, 9999.0)
@@ -182,12 +185,13 @@ class PreviewPanel(QGroupBox):
         controls.addWidget(self._start_spin)
 
         self._generate_btn = QPushButton("Generate Preview")
+        self._generate_btn.setProperty("variant", "primary")
         self._generate_btn.setEnabled(False)
         self._generate_btn.clicked.connect(self._on_generate_clicked)
         controls.addWidget(self._generate_btn)
 
         self._stale_label = QLabel("⚠ Regenerate")
-        self._stale_label.setStyleSheet("color: orange;")
+        self._stale_label.setStyleSheet(f"color: {TOKENS['electric_blue']}; font-weight: 600;")
         self._stale_label.hide()
         controls.addWidget(self._stale_label)
 
@@ -195,11 +199,13 @@ class PreviewPanel(QGroupBox):
 
         self._play_btn = QPushButton("▶")
         self._play_btn.setFixedWidth(32)
+        self._play_btn.setProperty("variant", "ghost")
         self._play_btn.setEnabled(False)
         self._play_btn.clicked.connect(self._on_play_clicked)
         controls.addWidget(self._play_btn)
 
         self._time_label = QLabel("0:00 / 0:00")
+        self._time_label.setProperty("secondary", "true")
         controls.addWidget(self._time_label)
 
         outer.addLayout(controls)

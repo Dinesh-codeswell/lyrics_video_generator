@@ -26,6 +26,7 @@ from src.core.song_resolver import (
     INPUT_LYRICS_DIR,
 )
 from src.gui.dialogs.new_song_dialog import NewSongDialog
+from src.gui.styles import TOKENS
 
 
 def _derive_slug(title: str) -> str:
@@ -70,58 +71,67 @@ class ImportSongDialog(QDialog):
         form.addRow("Filename slug:", self._slug_edit)
 
         slug_hint = QLabel("Used as the filename for all copied files.")
-        slug_hint.setStyleSheet("color: #888; font-size: 11px;")
+        slug_hint.setProperty("secondary", "true")
         form.addRow("", slug_hint)
 
         layout.addLayout(form)
 
         # Audio file
-        layout.addWidget(QLabel("Audio File (required):"))
+        audio_lbl = QLabel("Audio File (required):")
+        layout.addWidget(audio_lbl)
         audio_row = QHBoxLayout()
         self._audio_path = QLineEdit()
         self._audio_path.setReadOnly(True)
         self._audio_path.setPlaceholderText("No file selected")
         audio_row.addWidget(self._audio_path, stretch=1)
         audio_browse = QPushButton("Browse…")
+        audio_browse.setProperty("variant", "ghost")
         audio_browse.clicked.connect(self._browse_audio)
         audio_row.addWidget(audio_browse)
         layout.addLayout(audio_row)
         audio_hint = QLabel("Supported: " + ", ".join(AUDIO_EXTENSIONS))
-        audio_hint.setStyleSheet("color: #888; font-size: 11px;")
+        audio_hint.setProperty("secondary", "true")
         layout.addWidget(audio_hint)
 
         # Lyrics JSON
-        layout.addWidget(QLabel("Lyrics JSON (required):"))
+        lyrics_lbl = QLabel("Lyrics JSON (required):")
+        layout.addWidget(lyrics_lbl)
         lyrics_row = QHBoxLayout()
         self._lyrics_path = QLineEdit()
         self._lyrics_path.setReadOnly(True)
         self._lyrics_path.setPlaceholderText("No file selected")
         lyrics_row.addWidget(self._lyrics_path, stretch=1)
         lyrics_browse = QPushButton("Browse…")
+        lyrics_browse.setProperty("variant", "ghost")
         lyrics_browse.clicked.connect(self._browse_lyrics)
         lyrics_row.addWidget(lyrics_browse)
         lyrics_create = QPushButton("Create from Text…")
+        lyrics_create.setProperty("variant", "ghost")
         lyrics_create.clicked.connect(self._create_lyrics_from_text)
         lyrics_row.addWidget(lyrics_create)
         layout.addLayout(lyrics_row)
 
         # Background video
-        layout.addWidget(QLabel("Background Video (optional):"))
+        bg_lbl = QLabel("Background Video (optional):")
+        layout.addWidget(bg_lbl)
         bg_row = QHBoxLayout()
         self._bg_path = QLineEdit()
         self._bg_path.setReadOnly(True)
         self._bg_path.setPlaceholderText("No file selected — will use solid color background")
         bg_row.addWidget(self._bg_path, stretch=1)
         bg_browse = QPushButton("Browse…")
+        bg_browse.setProperty("variant", "ghost")
         bg_browse.clicked.connect(self._browse_background)
         bg_row.addWidget(bg_browse)
         bg_clear = QPushButton("Clear")
+        bg_clear.setProperty("variant", "ghost")
         bg_clear.clicked.connect(lambda: self._bg_path.clear())
         bg_row.addWidget(bg_clear)
         layout.addLayout(bg_row)
 
         note = QLabel("Files will be copied into the input/ directories.")
-        note.setStyleSheet("color: #888; font-size: 11px; font-style: italic; margin-top: 6px;")
+        note.setProperty("secondary", "true")
+        note.setStyleSheet("margin-top: 6px;")
         layout.addWidget(note)
 
         buttons = QDialogButtonBox(

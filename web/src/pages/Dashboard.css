@@ -1,0 +1,267 @@
+.dashboard {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--midnight-ink);
+}
+
+.dashboard-header {
+  height: 48px;
+  border-bottom: 1px solid var(--steel-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: var(--deep-graphite);
+  flex-shrink: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.song-title-display {
+  font-weight: 600;
+  color: var(--electric-blue);
+  font-size: 14px;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 4px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.success-btn {
+  color: var(--success-green);
+  border-color: var(--success-green) !important;
+}
+
+.api-error-banner {
+  background-color: var(--error-red);
+  color: white;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.dashboard-layout {
+  flex: 1;
+  display: flex;
+  padding: 8px;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.dashboard-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.top-row {
+  flex: 1.5;
+  display: flex;
+  gap: 8px;
+  min-height: 0;
+}
+
+.preview-area {
+  flex: 1;
+  min-width: 0;
+}
+
+.left-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.right-sidebar {
+  width: 360px;
+  flex-shrink: 0;
+}
+
+.panel-card.scrollable .card-content {
+  overflow-y: auto;
+}
+
+.preview-stage {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--steel-border);
+}
+
+.preview-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.preview-bg-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.preview-logo-container {
+  width: 100%;
+  position: absolute;
+  top: 40px;
+  padding: 0 40px;
+  z-index: 2;
+}
+
+.preview-text {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  padding: 0 40px;
+  transition: all 0.1s ease;
+}
+
+.preview-lyrics-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+}
+
+/* Cinematic Animation Styles */
+.preview-static-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.animate-current-line {
+  animation-fill-mode: both;
+}
+
+/* FADE: Soft dissolve */
+.fade .animate-current-line {
+  animation-name: lyric-fade;
+}
+
+@keyframes lyric-fade {
+  0% { opacity: 0; filter: blur(10px); }
+  100% { opacity: 1; filter: blur(0); }
+}
+
+/* SLIDE: Dynamic Push */
+.slide .animate-current-line {
+  animation-name: lyric-slide;
+}
+
+@keyframes lyric-slide {
+  0% { transform: translateY(50px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+/* KINETIC: Pop/Elastic Bounce */
+.kinetic .animate-current-line {
+  animation-name: lyric-kinetic;
+}
+
+@keyframes lyric-kinetic {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* TYPEWRITER is handled via JS substring, no keyframes needed */
+
+.preview-placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--soft-stone);
+  font-style: italic;
+}
+
+.export-progress-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(8, 8, 9, 0.9);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.progress-container {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.progress-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--electric-blue);
+  text-align: center;
+}
+
+.progress-track {
+  height: 4px;
+  background-color: var(--soft-stone);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--electric-blue);
+  transition: width 0.3s ease-out;
+  box-shadow: 0 0 10px var(--electric-blue);
+}
+
+.timeline-area {
+  flex: 1;
+  min-height: 0;
+}
+
+.panel-card {
+  height: 100%;
+}

@@ -1,0 +1,99 @@
+.theme-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px;
+}
+
+.editor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background-color: var(--midnight-ink);
+  border: 1px solid var(--steel-border);
+  border-radius: var(--radius-md);
+}
+
+.section-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--silver-whisper);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--white-canvas);
+}
+
+.control-row span:first-child {
+  width: 90px;
+  color: var(--silver-whisper);
+  flex-shrink: 0;
+}
+
+.value-label {
+  width: 45px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--electric-blue);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--white-canvas);
+}
+
+input[type="range"] {
+  flex: 1;
+  accent-color: var(--electric-blue);
+  height: 4px;
+}
+
+input[type="color"] {
+  width: 44px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--steel-border);
+  background: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+select {
+  flex: 1;
+  background-color: var(--slate-card);
+  border: 1px solid var(--steel-border);
+  color: var(--white-canvas);
+  padding: 4px 8px;
+  border-radius: 4px;
+  outline: none;
+}
+
+select:focus {
+  border-color: var(--electric-blue);
+}
+
+.text-input {
+  flex: 1;
+  background-color: var(--slate-card);
+  border: 1px solid var(--steel-border);
+  color: var(--white-canvas);
+  padding: 4px 8px;
+  border-radius: 4px;
+  outline: none;
+}
+
+.text-input:focus {
+  border-color: var(--electric-blue);
+}

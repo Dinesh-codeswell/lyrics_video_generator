@@ -40,6 +40,9 @@ from PyQt6.QtWidgets import (
 
 from src.gui.audio_player import AudioPlayer
 
+from src.gui.styles import TOKENS
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Internal data model
 # ──────────────────────────────────────────────────────────────────────────────
@@ -241,9 +244,9 @@ class _TimelineCanvas(QWidget):
 
     def _paint_ruler(self, p: QPainter) -> None:
         w = self.width()
-        p.fillRect(0, 0, w, RULER_H, QColor("#2b2b2b"))
+        p.fillRect(0, 0, w, RULER_H, QColor(TOKENS['midnight_ink']))
 
-        font = QFont()
+        font = QFont(TOKENS['font_primary'])
         font.setPointSize(8)
         p.setFont(font)
         fm = QFontMetrics(font)
@@ -258,7 +261,7 @@ class _TimelineCanvas(QWidget):
         t = 0.0
         while t <= self._duration_s + minor_s:
             x = self._time_to_x(t)
-            p.setPen(QPen(QColor("#555555"), 1))
+            p.setPen(QPen(QColor(TOKENS['steel_border']), 1))
             p.drawLine(x, RULER_H - 5, x, RULER_H)
             t = round(t + minor_s, 6)
 
@@ -266,11 +269,11 @@ class _TimelineCanvas(QWidget):
         t = 0.0
         while t <= self._duration_s + major_s:
             x = self._time_to_x(t)
-            p.setPen(QPen(QColor("#888888"), 1))
+            p.setPen(QPen(QColor(TOKENS['soft_stone']), 1))
             p.drawLine(x, RULER_H - 12, x, RULER_H)
             label = _fmt_s(t)
             lw = fm.horizontalAdvance(label)
-            p.setPen(QColor("#cccccc"))
+            p.setPen(QColor(TOKENS['silver_whisper']))
             p.drawText(x - lw // 2, RULER_H - 14, label)
             t = round(t + major_s, 6)
 
@@ -301,23 +304,23 @@ class _TimelineCanvas(QWidget):
 
             # Bar line (major)
             bx = self._time_to_x(bar_t)
-            p.setPen(QPen(QColor("#888888"), 1))
+            p.setPen(QPen(QColor(TOKENS['soft_stone']), 1))
             p.drawLine(bx, RULER_H - 14, bx, RULER_H)
             label = str(bar_num + 1)
             lw = fm.horizontalAdvance(label)
-            p.setPen(QColor("#cccccc"))
+            p.setPen(QColor(TOKENS['white_canvas']))
             p.drawText(bx - lw // 2, RULER_H - 15, label)
 
             if draw_beats:
                 for b in range(1, beats_per_bar):
                     beat_t = _beats_to_seconds(bar_beat + b, bpm, offset)
                     bx2 = self._time_to_x(beat_t)
-                    p.setPen(QPen(QColor("#666666"), 1))
+                    p.setPen(QPen(QColor(TOKENS['steel_border']), 1))
                     p.drawLine(bx2, RULER_H - 8, bx2, RULER_H)
                     if beat_px >= 30:
                         bl = str(b + 1)
                         blw = fm.horizontalAdvance(bl)
-                        p.setPen(QColor("#999999"))
+                        p.setPen(QColor(TOKENS['silver_whisper']))
                         p.drawText(bx2 - blw // 2, RULER_H - 9, bl)
 
             if draw_subdivs:
@@ -327,12 +330,12 @@ class _TimelineCanvas(QWidget):
                         continue  # skip beat boundaries already drawn
                     subdiv_t = _beats_to_seconds(bar_beat + s * subdiv, bpm, offset)
                     sx = self._time_to_x(subdiv_t)
-                    p.setPen(QPen(QColor("#444444"), 1))
+                    p.setPen(QPen(QColor(TOKENS['midnight_ink']), 1))
                     p.drawLine(sx, RULER_H - 4, sx, RULER_H)
 
     def _paint_track(self, p: QPainter) -> None:
         w = self.width()
-        p.fillRect(0, RULER_H, w, TRACK_H, QColor("#1e1e1e"))
+        p.fillRect(0, RULER_H, w, TRACK_H, QColor(TOKENS['deep_graphite']))
 
         for i, m in enumerate(self._markers):
             x1 = self._time_to_x(m.start_time)
@@ -343,11 +346,11 @@ class _TimelineCanvas(QWidget):
             )
             x2 = self._time_to_x(end_t)
             if i == self._active:
-                color = QColor("#1a3a1a")
+                color = QColor(TOKENS['success_green']).darker(200)
             elif i % 2 == 0:
-                color = QColor("#252525")
+                color = QColor(TOKENS['slate_card'])
             else:
-                color = QColor("#222222")
+                color = QColor(TOKENS['deep_graphite'])
             p.fillRect(x1, RULER_H, x2 - x1, TRACK_H, color)
 
         self._paint_gap_bands(p)
@@ -356,12 +359,14 @@ class _TimelineCanvas(QWidget):
         """Draw semi-transparent interlude bands and draggable gap-start handles."""
         if not self._gap_after_indices:
             return
-        font = QFont()
+        font = QFont(TOKENS['font_primary'])
         font.setPointSize(8)
         p.setFont(font)
-        band_color  = QColor(100, 160, 200, 60)
-        label_color = QColor(100, 160, 200, 200)
-        teal        = QColor("#40c0b0")
+        band_color  = QColor(TOKENS['electric_blue'])
+        band_color.setAlpha(40)
+        label_color = QColor(TOKENS['electric_blue'])
+        label_color.setAlpha(180)
+        teal        = QColor(TOKENS['electric_blue'])
         fm = QFontMetrics(font)
         for i in sorted(self._gap_after_indices):
             if i >= len(self._markers):
@@ -378,7 +383,7 @@ class _TimelineCanvas(QWidget):
             p.setPen(label_color)
             p.drawText(x1 + 4, RULER_H + fm.ascent() + 6, "♫")
 
-            # Teal dashed line + upward triangle at gap start time (draggable)
+            # Dash line + upward triangle at gap start time (draggable)
             pen = QPen(teal, 2)
             pen.setStyle(Qt.PenStyle.DashLine)
             p.setPen(pen)
@@ -395,7 +400,7 @@ class _TimelineCanvas(QWidget):
             p.drawText(x1 + 5, RULER_H + fm.ascent() + 6 + fm.height() + 2, "▶ interlude")
 
     def _paint_markers(self, p: QPainter) -> None:
-        font = QFont()
+        font = QFont(TOKENS['font_primary'])
         font.setPointSize(8)
         p.setFont(font)
         fm = QFontMetrics(font)
@@ -407,11 +412,11 @@ class _TimelineCanvas(QWidget):
             is_active = (i == self._active)
 
             if is_sel:
-                color = QColor("#ffcc44")
+                color = QColor(TOKENS['electric_blue'])
             elif is_active:
-                color = QColor("#66dd66")
+                color = QColor(TOKENS['success_green'])
             else:
-                color = QColor("#5588bb")
+                color = QColor(TOKENS['soft_stone'])
 
             # Vertical line
             p.setPen(QPen(color, 2 if is_sel else 1))
@@ -436,53 +441,53 @@ class _TimelineCanvas(QWidget):
             p.setPen(color)
             p.drawText(x + 5, RULER_H + fm.ascent() + 6, label)
 
-        # Intro end marker (gold dashed line + diamond handle)
+        # Intro end marker (Electric blue dashed line + diamond handle)
         if self._intro_end_t is not None:
             ix = self._time_to_x(self._intro_end_t)
-            gold = QColor("#f0c040")
-            pen = QPen(gold, 2)
+            blue = QColor(TOKENS['electric_blue'])
+            pen = QPen(blue, 2)
             pen.setStyle(Qt.PenStyle.DashLine)
             p.setPen(pen)
             p.drawLine(ix, RULER_H, ix, CANVAS_H)
             mid_y = RULER_H + TRACK_H // 2
             d = 7
             p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(gold)
+            p.setBrush(blue)
             p.drawPolygon(QPolygon([
                 QPoint(ix,     mid_y - d),
                 QPoint(ix + d, mid_y),
                 QPoint(ix,     mid_y + d),
                 QPoint(ix - d, mid_y),
             ]))
-            p.setPen(gold)
+            p.setPen(blue)
             p.drawText(ix + 5, RULER_H + fm.ascent() + 6, "▶ lyrics")
 
-        # Outro start marker (blue dashed line + inverted diamond handle)
+        # Outro start marker (Silver whisper dashed line + inverted diamond handle)
         if self._outro_start_t is not None:
             ox = self._time_to_x(self._outro_start_t)
-            blue = QColor("#60c0f0")
-            pen = QPen(blue, 2)
+            silver = QColor(TOKENS['silver_whisper'])
+            pen = QPen(silver, 2)
             pen.setStyle(Qt.PenStyle.DashLine)
             p.setPen(pen)
             p.drawLine(ox, RULER_H, ox, CANVAS_H)
             mid_y = RULER_H + TRACK_H // 2
             d = 7
             p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(blue)
+            p.setBrush(silver)
             p.drawPolygon(QPolygon([
                 QPoint(ox,     mid_y + d),
                 QPoint(ox + d, mid_y),
                 QPoint(ox,     mid_y - d),
                 QPoint(ox - d, mid_y),
             ]))
-            p.setPen(blue)
+            p.setPen(silver)
             p.drawText(ox + 5, RULER_H + fm.ascent() + 6, "end ◀")
 
     def _paint_cursor(self, p: QPainter) -> None:
         if self._duration_s <= 0:
             return
         x = self._time_to_x(self._cursor_s)
-        p.setPen(QPen(QColor("#ff4444"), 1))
+        p.setPen(QPen(QColor(TOKENS['error_red']), 1))
         p.drawLine(x, 0, x, CANVAS_H)
 
         # Time readout floating in the ruler next to the cursor
@@ -498,7 +503,7 @@ class _TimelineCanvas(QWidget):
             total_s = int(t)
             tenths = int((t - total_s) * 10)
             label = f"{total_s // 60}:{total_s % 60:02d}.{tenths}"
-        font = QFont()
+        font = QFont(TOKENS['font_primary'])
         font.setPointSize(8)
         font.setBold(True)
         p.setFont(font)
@@ -507,7 +512,7 @@ class _TimelineCanvas(QWidget):
         pad = 3
         # Flip to left of cursor when too close to the right edge
         lx = x + pad if x + pad + lw < self.width() else x - pad - lw
-        p.setPen(QColor("#ff4444"))
+        p.setPen(QColor(TOKENS['error_red']))
         p.drawText(lx, RULER_H - 4, label)
 
     # ── adaptive tick granularity ─────────────────────────────────────────────
@@ -678,11 +683,20 @@ class _MarkerDetailArea(QWidget):
         self._build_ui()
 
     def _build_ui(self) -> None:
+        self.setObjectName("MarkerDetailArea")
+        self.setStyleSheet(f"""
+            QWidget#MarkerDetailArea {{
+                background-color: {TOKENS['deep_graphite']};
+                border: 1px solid {TOKENS['steel_border']};
+                border-radius: {TOKENS['radius_lg']};
+            }}
+        """)
         row = QHBoxLayout(self)
-        row.setContentsMargins(6, 4, 6, 4)
-        row.setSpacing(8)
+        row.setContentsMargins(12, 8, 12, 8)
+        row.setSpacing(12)
 
         self._prev_btn = QPushButton("◀ Prev")
+        self._prev_btn.setProperty("variant", "ghost")
         self._prev_btn.setFixedWidth(70)
         self._prev_btn.clicked.connect(self.prev_clicked)
         row.addWidget(self._prev_btn)
@@ -692,7 +706,10 @@ class _MarkerDetailArea(QWidget):
         self._text_edit.textEdited.connect(self._on_text_edited)
         row.addWidget(self._text_edit, stretch=2)
 
-        row.addWidget(QLabel("Start:"))
+        start_lbl = QLabel("Start:")
+        start_lbl.setProperty("secondary", "true")
+        row.addWidget(start_lbl)
+        
         self._start_spin = QDoubleSpinBox()
         self._start_spin.setRange(0.0, 9999.0)
         self._start_spin.setDecimals(2)
@@ -703,31 +720,39 @@ class _MarkerDetailArea(QWidget):
         row.addWidget(self._start_spin)
 
         self._beat_lbl = QLabel("")
-        self._beat_lbl.setStyleSheet("color: #888888; font-style: italic;")
+        self._beat_lbl.setProperty("secondary", "true")
         self._beat_lbl.setFixedWidth(110)
         row.addWidget(self._beat_lbl)
 
-        row.addWidget(QLabel("End:"))
+        end_lbl = QLabel("End:")
+        end_lbl.setProperty("secondary", "true")
+        row.addWidget(end_lbl)
+        
         self._end_lbl = QLabel("—")
         self._end_lbl.setFixedWidth(58)
         row.addWidget(self._end_lbl)
 
-        row.addWidget(QLabel("Dur:"))
+        dur_lbl = QLabel("Dur:")
+        dur_lbl.setProperty("secondary", "true")
+        row.addWidget(dur_lbl)
+        
         self._dur_lbl = QLabel("—")
         self._dur_lbl.setFixedWidth(58)
         row.addWidget(self._dur_lbl)
 
         self._dirty_lbl = QLabel("")
-        self._dirty_lbl.setStyleSheet("color: #ff8800; font-weight: bold;")
+        self._dirty_lbl.setStyleSheet(f"color: {TOKENS['electric_blue']}; font-weight: bold;")
         self._dirty_lbl.setFixedWidth(90)
         row.addWidget(self._dirty_lbl)
 
         self._save_btn = QPushButton("Save")
+        self._save_btn.setProperty("variant", "primary")
         self._save_btn.setFixedWidth(60)
         self._save_btn.clicked.connect(self.save_clicked)
         row.addWidget(self._save_btn)
 
         self._next_btn = QPushButton("Next ▶")
+        self._next_btn.setProperty("variant", "ghost")
         self._next_btn.setFixedWidth(70)
         self._next_btn.clicked.connect(self.next_clicked)
         row.addWidget(self._next_btn)
@@ -1083,8 +1108,8 @@ class TimelineEditorPanel(QGroupBox):
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(4)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
 
         # Canvas (must exist before toolbar connects snap checkbox)
         self._canvas = _TimelineCanvas()
@@ -1101,12 +1126,14 @@ class TimelineEditorPanel(QGroupBox):
 
         # Song Info row (title + artist editable fields)
         info_row = QHBoxLayout()
-        info_row.setSpacing(6)
-        info_row.addWidget(QLabel("Title:"))
+        info_row.setSpacing(12)
+        title_lbl = QLabel("Title:")
+        title_lbl.setProperty("secondary", "true")
+        info_row.addWidget(title_lbl)
         self._title_edit = QLineEdit()
         self._title_edit.setPlaceholderText("Song title")
         self._title_edit.textEdited.connect(self._on_title_edited)
-        info_row.addWidget(self._title_edit, stretch=2)
+        info_row.addWidget(self._title_edit, stretch=1)
         layout.addLayout(info_row)
 
         self._scroll = QScrollArea()
@@ -1115,6 +1142,7 @@ class TimelineEditorPanel(QGroupBox):
         self._scroll.setWidgetResizable(False)
         self._scroll.setWidget(self._canvas)
         self._scroll.setMinimumHeight(CANVAS_H + 22)
+        self._scroll.setStyleSheet(f"border: 1px solid {TOKENS['steel_border']}; border-radius: {TOKENS['radius_lg']}; background: {TOKENS['midnight_ink']};")
         # Intercept Ctrl+scroll on the viewport for zoom
         self._scroll.viewport().installEventFilter(self)
         layout.addWidget(self._scroll, stretch=1)
@@ -1131,7 +1159,9 @@ class TimelineEditorPanel(QGroupBox):
         row = QHBoxLayout()
         row.setSpacing(8)
 
-        row.addWidget(QLabel("Zoom:"))
+        zoom_lbl = QLabel("Zoom:")
+        zoom_lbl.setProperty("secondary", "true")
+        row.addWidget(zoom_lbl)
 
         self._zoom_slider = QSlider(Qt.Orientation.Horizontal)
         self._zoom_slider.setRange(1, 20)    # slider value / 10 = zoom multiplier (0.1×–2.0×)
@@ -1142,6 +1172,8 @@ class TimelineEditorPanel(QGroupBox):
         row.addWidget(self._zoom_slider)
 
         self._zoom_lbl = QLabel("1.0×")
+        self._zoom_lbl.setProperty("secondary", "true")
+        self._zoom_lbl.setFixedWidth(36)
         row.addWidget(self._zoom_lbl)
 
         self._snap_cb = QCheckBox("Snap 0.1s")
@@ -1159,7 +1191,7 @@ class TimelineEditorPanel(QGroupBox):
         self._bpm_spin.setValue(120.0)
         self._bpm_spin.setDecimals(1)
         self._bpm_spin.setSuffix(" BPM")
-        self._bpm_spin.setFixedWidth(90)
+        self._bpm_spin.setFixedWidth(84)
         self._bpm_spin.setEnabled(False)
         self._bpm_spin.setToolTip("Beats per minute")
         self._bpm_spin.valueChanged.connect(self._on_beat_params_changed)
@@ -1169,7 +1201,7 @@ class TimelineEditorPanel(QGroupBox):
         self._time_sig_spin.setRange(1, 16)
         self._time_sig_spin.setValue(4)
         self._time_sig_spin.setSuffix("/4")
-        self._time_sig_spin.setFixedWidth(52)
+        self._time_sig_spin.setFixedWidth(48)
         self._time_sig_spin.setEnabled(False)
         self._time_sig_spin.setToolTip("Beats per bar (time signature numerator)")
         self._time_sig_spin.valueChanged.connect(self._on_beat_params_changed)
@@ -1180,7 +1212,7 @@ class TimelineEditorPanel(QGroupBox):
         self._beat_offset_spin.setValue(0.0)
         self._beat_offset_spin.setDecimals(3)
         self._beat_offset_spin.setSuffix("s off")
-        self._beat_offset_spin.setFixedWidth(90)
+        self._beat_offset_spin.setFixedWidth(84)
         self._beat_offset_spin.setEnabled(False)
         self._beat_offset_spin.setToolTip("Beat 1 offset in seconds (for pickup bars or intro silence)")
         self._beat_offset_spin.valueChanged.connect(self._on_beat_params_changed)
@@ -1204,40 +1236,46 @@ class TimelineEditorPanel(QGroupBox):
         row.addStretch()
 
         self._insert_btn = QPushButton("+ Insert")
-        self._insert_btn.setFixedWidth(72)
+        self._insert_btn.setProperty("variant", "ghost")
+        self._insert_btn.setFixedWidth(78)
         self._insert_btn.setToolTip("Insert a new blank marker after the selected one")
         self._insert_btn.setEnabled(False)
         self._insert_btn.clicked.connect(self._on_insert)
         row.addWidget(self._insert_btn)
 
         self._delete_btn = QPushButton("− Delete")
-        self._delete_btn.setFixedWidth(72)
+        self._delete_btn.setProperty("variant", "ghost")
+        self._delete_btn.setFixedWidth(78)
         self._delete_btn.setToolTip("Delete the selected marker")
         self._delete_btn.setEnabled(False)
         self._delete_btn.clicked.connect(self._on_delete)
         row.addWidget(self._delete_btn)
 
         self._set_intro_btn = QPushButton("Set Intro ▶")
-        self._set_intro_btn.setFixedWidth(90)
+        self._set_intro_btn.setProperty("variant", "ghost")
+        self._set_intro_btn.setFixedWidth(94)
         self._set_intro_btn.setToolTip("Place intro end marker at current playback position")
         self._set_intro_btn.clicked.connect(self._on_set_intro)
         row.addWidget(self._set_intro_btn)
 
         self._clear_intro_btn = QPushButton("Clear Intro")
-        self._clear_intro_btn.setFixedWidth(85)
+        self._clear_intro_btn.setProperty("variant", "ghost")
+        self._clear_intro_btn.setFixedWidth(88)
         self._clear_intro_btn.setToolTip("Remove the intro end marker (disables title card)")
         self._clear_intro_btn.setEnabled(False)
         self._clear_intro_btn.clicked.connect(self._on_clear_intro)
         row.addWidget(self._clear_intro_btn)
 
         self._set_outro_btn = QPushButton("Set Outro ◀")
-        self._set_outro_btn.setFixedWidth(90)
+        self._set_outro_btn.setProperty("variant", "ghost")
+        self._set_outro_btn.setFixedWidth(94)
         self._set_outro_btn.setToolTip("Place outro start marker at current playback position")
         self._set_outro_btn.clicked.connect(self._on_set_outro)
         row.addWidget(self._set_outro_btn)
 
         self._clear_outro_btn = QPushButton("Clear Outro")
-        self._clear_outro_btn.setFixedWidth(85)
+        self._clear_outro_btn.setProperty("variant", "ghost")
+        self._clear_outro_btn.setFixedWidth(88)
         self._clear_outro_btn.setToolTip("Remove the outro start marker")
         self._clear_outro_btn.setEnabled(False)
         self._clear_outro_btn.clicked.connect(self._on_clear_outro)

@@ -1,0 +1,112 @@
+:root {
+  /* --- OpenSea Dark (Dashboard) --- */
+  --midnight-ink: #080809;     /* Page backgrounds */
+  --deep-graphite: #141415;    /* Main surfaces */
+  --slate-card: #1b1d1f;       /* Card backgrounds */
+  --steel-border: #26272d;     /* Subtle borders */
+  --soft-stone: #34353c;       /* Dark borders */
+  --ghost-fill: #3c3d40;       /* Subdued layers */
+  --white-canvas: #ffffff;     /* Primary text */
+  --silver-whisper: #acadae;   /* Secondary text */
+  --electric-blue: #83c3ff;    /* Accents */
+  --success-green: #47bb64;    /* Positive accent */
+  --error-red: #e24756;        /* Negative accent */
+
+  /* --- Micro Light (Landing Page) --- */
+  --color-inkwell: #221f1c;
+  --color-canvas-white: #f5f5f5;
+  --color-subtle-gray: #797267;
+  --color-deep-gray: #575452;
+  --color-lightest-gray: #ababab;
+  --color-border-gray: #c4c4c4;
+  --color-midnight-blue: #518bdb;
+  --gradient-midnight-blue: linear-gradient(to right, #518bdb 0%, #36bab8 100%);
+  --color-teal-burst: #36bab8;
+  --color-forest-green: #1a3a12;
+  --color-lavender-haze: #bf89cd;
+  --color-sunset-red: #ed6d68;
+  --color-honey-gold: #e5a057;
+  --color-lime-squeeze: #7efa55;
+  --color-deep-olive: #3a6b2a;
+
+  /* Typography */
+  --font-haffer: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-ui-monospace: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-perfectlynineties: 'Georgia', serif;
+
+  /* Spacing */
+  --spacing-4: 4px;
+  --spacing-8: 8px;
+  --spacing-12: 12px;
+  --spacing-16: 16px;
+  --spacing-20: 20px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-40: 40px;
+  --spacing-48: 48px;
+  --spacing-64: 64px;
+  --spacing-80: 80px;
+  --spacing-96: 96px;
+  --spacing-128: 128px;
+
+  /* Shadows */
+  --shadow-subtle: rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px;
+  --shadow-subtle-border: 0px 0px 0px 1px rgba(34, 31, 28, 0.065), 0px 1px 3px 0px rgba(0, 0, 0, 0.1);
+  --shadow-md: rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px;
+  --shadow-xl: rgba(0, 0, 0, 0.1) 0px 20px 25px -5px, rgba(0, 0, 0, 0.1) 0px 8px 10px -6px;
+
+  /* Border Radius */
+  --radius-cards: 18px;
+  --radius-inputs: 10px;
+  --radius-buttons: 8px;
+  --radius-taglike: 14px;
+  --radius-circular: 9999px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--midnight-ink);
+  color: var(--white-canvas);
+  font-family: var(--font-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--midnight-ink);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--soft-stone);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ghost-fill);
+}

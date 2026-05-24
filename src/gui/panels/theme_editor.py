@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core.theme_loader import DEFAULTS, Theme, load_theme
+from src.gui.styles import TOKENS
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -51,7 +52,7 @@ class _ColorButton(QPushButton):
         """Set button color without emitting color_changed."""
         self._hex = hex_color
         self.setStyleSheet(
-            f"background-color: {hex_color}; border: 1px solid #555; border-radius: 3px;"
+            f"background-color: {hex_color}; border: 1px solid {TOKENS['steel_border']}; border-radius: 4px;"
         )
 
     def color(self) -> str:
@@ -78,6 +79,15 @@ class _CollapsibleSection(QWidget):
     def __init__(self, title: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
+        self.setObjectName("CollapsibleSection")
+        self.setStyleSheet(f"""
+            QWidget#CollapsibleSection {{
+                background-color: {TOKENS['slate_card']};
+                border: 1px solid {TOKENS['steel_border']};
+                border-radius: {TOKENS['radius_lg']};
+            }}
+        """)
+
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
@@ -86,9 +96,19 @@ class _CollapsibleSection(QWidget):
         self._toggle_btn.setCheckable(True)
         self._toggle_btn.setChecked(True)
         self._toggle_btn.setFlat(True)
-        self._toggle_btn.setStyleSheet(
-            "text-align: left; padding: 4px 6px; font-weight: bold;"
-        )
+        self._toggle_btn.setStyleSheet(f"""
+            QPushButton {{
+                text-align: left;
+                padding: 12px;
+                font-weight: 600;
+                color: {TOKENS['white_canvas']};
+                border: none;
+                background: transparent;
+            }}
+            QPushButton:hover {{
+                color: {TOKENS['electric_blue']};
+            }}
+        """)
         self._toggle_btn.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
@@ -97,8 +117,8 @@ class _CollapsibleSection(QWidget):
 
         self._content = QWidget()
         self._content_layout = QVBoxLayout(self._content)
-        self._content_layout.setContentsMargins(8, 2, 4, 6)
-        self._content_layout.setSpacing(4)
+        self._content_layout.setContentsMargins(12, 4, 12, 12)
+        self._content_layout.setSpacing(8)
         outer.addWidget(self._content)
 
         self._title = title
@@ -110,7 +130,7 @@ class _CollapsibleSection(QWidget):
         row = QHBoxLayout()
         row.setSpacing(6)
         lbl = QLabel(label)
-        lbl.setFixedWidth(72)
+        lbl.setFixedWidth(80)
         lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         row.addWidget(lbl)
         for w in widgets:
@@ -206,15 +226,17 @@ class ThemeEditorPanel(QGroupBox):
     def _refresh_name_label(self, name: str) -> None:
         self._name_label.setText(name)
         if name == DEFAULTS["name"]:
-            self._name_label.setStyleSheet(
-                "font-style: italic; color: #888; padding: 1px 4px;"
-            )
+            self._name_label.setProperty("secondary", "true")
+            self._name_label.setStyleSheet("padding: 1px 4px;")
         else:
-            self._name_label.setStyleSheet(
-                "font-weight: bold; color: #e8c84a;"
-                " background: #2a2418; border: 1px solid #6a5420;"
-                " border-radius: 4px; padding: 1px 6px;"
-            )
+            self._name_label.setProperty("secondary", "false")
+            self._name_label.setStyleSheet(f"""
+                font-weight: 600; 
+                color: {TOKENS['electric_blue']};
+                background: {TOKENS['soft_stone']}; 
+                border: 1px solid {TOKENS['electric_blue']};
+                border-radius: 4px; padding: 1px 6px;
+            """)
 
     def _set_theme_dirty(self, dirty: bool) -> None:
         if dirty != self._dirty:
@@ -240,17 +262,17 @@ class ThemeEditorPanel(QGroupBox):
         top.addStretch()
 
         load_btn = QPushButton("Load…")
-        load_btn.setFixedWidth(52)
+        load_btn.setFixedWidth(64)
         load_btn.clicked.connect(self._on_load_clicked)
         top.addWidget(load_btn)
 
         save_btn = QPushButton("Save")
-        save_btn.setFixedWidth(44)
+        save_btn.setFixedWidth(56)
         save_btn.clicked.connect(lambda: self.save_theme())
         top.addWidget(save_btn)
 
         reset_btn = QPushButton("Reset")
-        reset_btn.setFixedWidth(48)
+        reset_btn.setFixedWidth(60)
         reset_btn.clicked.connect(self._on_reset_clicked)
         top.addWidget(reset_btn)
 
