@@ -10,16 +10,7 @@ import { DEFAULTS } from '../types';
 import type { Theme, LyricClip } from '../types';
 import './Dashboard.css';
 
-// Environment-aware API URL
-const isProd = import.meta.env.PROD;
-const VITE_API_URL = import.meta.env.VITE_API_URL;
-
-// In production, we MUST have an explicit API URL or it will 404 on Vercel.
-// We fallback to empty string in prod if missing to avoid 'window.location.origin' which causes 404s.
-const API_BASE_URL = VITE_API_URL || (isProd ? '' : 'http://localhost:8000');
-
-const CONFIGURATION_ERROR = 'Production Setup Required: Please set the VITE_API_URL environment variable in Vercel to your live Python backend.';
-const PRODUCTION_ERROR = 'Connecting to production services... This may take a moment if the server is waking up.';
+const PRODUCTION_ERROR = 'Synchronizing with production services... This may take a moment if the server is waking up.';
 const DEVELOPMENT_ERROR = 'Backend server unreachable. Please start the API using .\\venv\\Scripts\\python.exe -m src.api.main';
 
 export const Dashboard: React.FC = () => {
@@ -178,25 +169,13 @@ export const Dashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    // Diagnostic log for production troubleshooting
-    console.log(`[Production Diagnostic] API_BASE_URL is set to: "${API_BASE_URL}"`);
-    if (isProd && !VITE_API_URL) {
-      console.warn('[Production Warning] VITE_API_URL environment variable is missing in Vercel settings.');
-    }
-
     const checkApi = async () => {
-      // If in production and we don't even have a URL, don't bother fetching
-      if (isProd && !VITE_API_URL) {
-        setApiError(CONFIGURATION_ERROR);
-        return;
-      }
-
       try {
-        const resp = await fetch(`${API_BASE_URL}/api/songs`);
+        const resp = await fetch('/api/songs');
         if (resp.ok) setApiError(null);
         else throw new Error();
       } catch {
-        setApiError(isProd ? PRODUCTION_ERROR : DEVELOPMENT_ERROR);
+        setApiError(import.meta.env.PROD ? PRODUCTION_ERROR : DEVELOPMENT_ERROR);
       }
     };
     checkApi();
@@ -207,12 +186,12 @@ export const Dashboard: React.FC = () => {
   const handleSongSelect = async (slug: string) => {
     setSelectedSong(slug);
     try {
-      const resp = await fetch(`${API_BASE_URL}/api/songs/${slug}`);
+      const resp = await fetch(`/api/songs/${slug}`);
       const paths = await resp.json();
       setSongPaths(paths);
 
       if (paths.lyrics) {
-        const lyrResp = await fetch(`${API_BASE_URL}/api/download_raw?path=${paths.lyrics}`);
+        const lyrResp = await fetch(`/api/download_raw?path=${paths.lyrics}`);
         const lyrData = await lyrResp.json();
         setSongMetadata({
           title: lyrData.title || slug,
@@ -252,7 +231,7 @@ export const Dashboard: React.FC = () => {
       }
 
       if (paths.theme) {
-        const themeResp = await fetch(`${API_BASE_URL}/api/download_raw?path=${paths.theme}`);
+        const themeResp = await fetch(`/api/download_raw?path=${paths.theme}`);
         const themeData = await themeResp.json();
         setTheme({ ...DEFAULTS, ...themeData });
       } else {
@@ -270,13 +249,13 @@ export const Dashboard: React.FC = () => {
       formData.append('slug', selectedSong);
       formData.append('background', file);
       
-      const resp = await fetch(`${API_BASE_URL}/api/upload`, {
+      const resp = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
       
       if (resp.ok) {
-        const pathsResp = await fetch(`${API_BASE_URL}/api/songs/${selectedSong}`);
+        const pathsResp = await fetch(`/api/songs/${selectedSong}`);
         const paths = await pathsResp.json();
         setSongPaths(paths);
       }
@@ -297,7 +276,7 @@ export const Dashboard: React.FC = () => {
     setRenderProgress(0);
     setJobId(null);
     try {
-      const resp = await fetch(`${API_BASE_URL}/api/generate`, {
+      const resp = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -311,7 +290,7 @@ export const Dashboard: React.FC = () => {
       
       const poll = setInterval(async () => {
         try {
-          const statusResp = await fetch(`${API_BASE_URL}/api/status/${data.job_id}`);
+          const statusResp = await fetch(`/api/status/${data.job_id}`);
           const statusData = await statusResp.json();
           setRenderProgress(statusData.progress || 0);
           if (statusData.status === 'completed' || statusData.status === 'failed') {
@@ -347,7 +326,7 @@ export const Dashboard: React.FC = () => {
       formData.append('lyrics', blob, `${selectedSong}.json`);
       formData.append('slug', selectedSong);
       
-      await fetch(`${API_BASE_URL}/api/upload`, {
+      await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
@@ -391,7 +370,7 @@ export const Dashboard: React.FC = () => {
             {isExporting ? `Generating (${renderProgress}%)` : 'Export Video'}
           </Button>
           {jobId && !isExporting && (
-            <a href={`${API_BASE_URL}/api/download/${jobId}`} download>
+            <a href={`/api/download/${jobId}`} download>
               <Button variant="ghost" size="sm" className="success-btn"><Download size={14} /> Download</Button>
             </a>
           )}
@@ -428,7 +407,7 @@ export const Dashboard: React.FC = () => {
                 {songPaths?.background && (
                   <video 
                     ref={bgVideoRef}
-                    src={`${API_BASE_URL}/api/download_raw?path=${songPaths.background}`}
+                    src={`/api/download_raw?path=${songPaths.background}`}
                     autoPlay 
                     loop 
                     muted 
@@ -449,7 +428,7 @@ export const Dashboard: React.FC = () => {
                 {theme.logo_path && (
                   <div className="compositor-layer layer-logo" style={{ textAlign: theme.logo_h_align }}>
                     <img 
-                      src={`${API_BASE_URL}/api/download_raw?path=${theme.logo_path}`} 
+                      src={`/api/download_raw?path=${theme.logo_path}`} 
                       alt="Logo"
                       style={{ width: `${theme.logo_width * previewScale}px`, height: 'auto' }}
                       onError={(e) => (e.currentTarget.style.display = 'none')}
@@ -533,8 +512,8 @@ export const Dashboard: React.FC = () => {
              {/* Unified Editor Stage */}
              <div className="unified-editor-container">
                 <WebTimeline 
-                  audioUrl={songPaths?.audio ? `${API_BASE_URL}/api/download_raw?path=${songPaths.audio}` : undefined}
-                  bgUrl={songPaths?.background ? `${API_BASE_URL}/api/download_raw?path=${songPaths.background}` : undefined}
+                  audioUrl={songPaths?.audio ? `/api/download_raw?path=${songPaths.audio}` : undefined}
+                  bgUrl={songPaths?.background ? `/api/download_raw?path=${songPaths.background}` : undefined}
                   clips={clips}
                   onClipChange={setClips}
                   onTimeUpdate={setCurrentTime}

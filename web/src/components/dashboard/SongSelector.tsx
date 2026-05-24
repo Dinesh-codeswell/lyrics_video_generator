@@ -3,18 +3,6 @@ import { Music, Upload, RefreshCw, FileJson, Video, Plus, X, Sparkles, Trash2, S
 import { Button } from '../ui/Button';
 import './SongSelector.css';
 
-// Environment-aware API URL
-const isProd = import.meta.env.PROD;
-const VITE_API_URL = import.meta.env.VITE_API_URL;
-const API_BASE_URL = VITE_API_URL || (isProd ? '' : 'http://localhost:8000');
-
-interface Song {
-  name: string;
-  has_lyrics: boolean;
-  has_audio: boolean;
-  is_loadable: boolean;
-}
-
 export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ onSelect }) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,12 +29,11 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
   const [loadingAI, setLoadingAI] = useState<string | null>(null);
 
   const fetchSongs = async () => {
-    if (isProd && !VITE_API_URL) return; // Don't fetch if misconfigured in prod
     setLoading(true);
     try {
       const [songsResp, bgResp] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/songs`),
-        fetch(`${API_BASE_URL}/api/backgrounds`)
+        fetch('/api/songs'),
+        fetch('/api/backgrounds')
       ]);
       const songsData = await songsResp.json();
       const bgData = await bgResp.json();
@@ -76,7 +63,7 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
     }
 
     try {
-      const resp = await fetch(`${API_BASE_URL}/api/songs/${slug}`, {
+      const resp = await fetch(`/api/songs/${slug}`, {
         method: 'DELETE'
       });
       if (resp.ok) {
@@ -112,7 +99,7 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
         formData.append('background_preset', selectedBackground);
       }
 
-      const resp = await fetch(`${API_BASE_URL}/api/upload`, {
+      const resp = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
@@ -167,7 +154,7 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
       formData.append('lyrics', blob, `${slug}.json`);
       formData.append('slug', slug);
       
-      const resp = await fetch(`${API_BASE_URL}/api/upload`, {
+      const resp = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
@@ -193,7 +180,7 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
     if (e) e.stopPropagation();
     setLoadingAI(slug);
     try {
-      const resp = await fetch(`${API_BASE_URL}/api/auto-lyrics/${slug}`, {
+      const resp = await fetch(`/api/auto-lyrics/${slug}`, {
         method: 'POST'
       });
       if (resp.ok) {
@@ -433,3 +420,10 @@ export const SongSelector: React.FC<{ onSelect: (slug: string) => void }> = ({ o
     </div>
   );
 };
+
+interface Song {
+  name: string;
+  has_lyrics: boolean;
+  has_audio: boolean;
+  is_loadable: boolean;
+}

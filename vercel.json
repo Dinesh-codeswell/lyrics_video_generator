@@ -5,5 +5,11 @@
   "framework": "vite",
   "installCommand": "npm install",
   "buildCommand": "npm run build",
-  "outputDirectory": "web/dist"
+  "outputDirectory": "web/dist",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://lyrics-video-generator-api.onrender.com/api/$1"
+    }
+  ]
 }
