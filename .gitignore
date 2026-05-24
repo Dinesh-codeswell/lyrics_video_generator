@@ -37,7 +37,16 @@ output/
 # Input feedstock (keep folder structure via .gitkeep)
 input/audio/*
 input/lyrics/*
-input/backgrounds/*
+# Allow background presets to be tracked for production deployment
+input/backgrounds/.gitkeep
+!input/backgrounds/*.mp4
+!input/backgrounds/*.mov
+!input/backgrounds/*.avi
+!input/backgrounds/*.mkv
+!input/backgrounds/*.webm
+
+# Still ignore specifically uploaded ones if we want to differentiate (optional)
+# For now, we allow everything in backgrounds to ensure your 6 presets show up.
 !input/**/.gitkeep
 
 # Themes (only default.json is public; personal/song-specific themes are local)
