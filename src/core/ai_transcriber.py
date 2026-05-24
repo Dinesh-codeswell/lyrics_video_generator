@@ -1,10 +1,15 @@
 import requests
 import time
+import os
 from pathlib import Path
 from typing import List, Dict, Any
+from dotenv import load_dotenv
 
-# PROVIDED API KEY
-API_KEY = "bc75b4a7ddc64b66a5224927d20f0424"
+# Load environment variables from .env file
+load_dotenv()
+
+# Fetch API Key from environment
+API_KEY = os.getenv("ASSEMBLYAI_API_KEY")
 
 BASE_URL = "https://api.assemblyai.com/v2"
 HEADERS = {"authorization": API_KEY}
